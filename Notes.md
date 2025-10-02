@@ -25,6 +25,7 @@
 #Future Improvements
 - Ability to add cutoff times to custom markers 
 - More experimentation and understanding of pace functions (VO2, decay)
+- Add negative split possibility to pace calculation
 - Create documentation for everything (Youtube Tutorial Video?) need to link in app 
 - Customer feedback area (where will this go? Google sheets and email notification ?) 
 - Upload multiple gpx files and weave together
