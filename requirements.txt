@@ -1,0 +1,7 @@
+streamlit
+folium
+pandas
+numpy
+gpxpy
+geopy
+matplotlib
