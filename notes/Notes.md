@@ -2,7 +2,7 @@
 
 
 #TODO
-- Organize repo with folders for any saved information 
+- [x] Organize repo with folders for any saved information 
 - Fix the TODO's in pace_planner.py 
 - Make streamlit app prettier
   - Move title to top left 
