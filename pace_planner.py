@@ -35,7 +35,7 @@ class GPXAnalyzer:
         self.km_markers = {}
         
     def load_gpx(self):
-        with open('pdtr_main_loop.gpx', 'r') as gpx_file:
+        with open(self.gpx_file_path, 'r') as gpx_file:
             self.gpx_parsed = gpxpy.parse(gpx_file)
 
         # Extract track points (latitude, longitude, elevation)
@@ -53,9 +53,14 @@ class GPXAnalyzer:
 
         #looping input gpx route by concatenating
         if loops > 0:
-            loop_holder = [self.df for _ in range(loops)]  # Create list of DataFrames
-            self.final_df = pd.concat(loop_holder, axis = 0).reset_index(drop=True)
+            loop_holder = []
+            for _ in range(loops):
+                copy_df = self.df.copy()  # Create a copy of the DataFrame
+                copy_df['lap'] = _ + 1  # Add a column to indicate the loop number
+                loop_holder.append(copy_df)
+            self.final_df = pd.concat(loop_holder, axis=0).reset_index(drop=True)
         else:
+            self.df['loop'] = 1  # Add a column to indicate the loop number
             self.final_df = self.df
 
 
@@ -275,8 +280,8 @@ class MapVisualizer:
 
         for i, (index, row) in enumerate(km_marker_rows.iterrows()):
             # Calculate bearing to next point (look ahead for smoother direction)
-            # TODO make look_ahead more dynamic ensuring there are enough markers ahead for smooth bearing calculation
-            look_ahead = 5
+            #take minimum of 5 or remaining markers for bearing calculation
+            look_ahead = min([5, len(km_marker_rows) - i - 1])
             if look_ahead > 0 and index + look_ahead < len(combined):
                 next_point_idx = index + look_ahead
                 bearing = calculate_bearing(
@@ -284,9 +289,11 @@ class MapVisualizer:
                     combined.iloc[next_point_idx]['latitude'], combined.iloc[next_point_idx]['longitude']
                 )
                 
-                # Color coding: blue for first loop, green for second loop
-                # TODO make this coloring dynamic
-                color = 'blue' if row['total_distance'] <= 24 else 'green'
+                # Dynamic color coding based on lap number
+                colors = ['blue', 'green', 'red', 'purple', 'orange']
+                lap_number = row.get('lap', 1)  # Default to 1 if lap column doesn't exist
+                color_index = (lap_number - 1) % len(colors)  # Cycle through colors
+                color = colors[color_index]
                 
                 # Create custom arrow marker
                 arrow_icon = create_arrow_icon(color, bearing)

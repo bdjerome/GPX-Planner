@@ -3,12 +3,14 @@
 
 #TODO
 - [x] Organize repo with folders for any saved information 
-- Fix the TODO's in pace_planner.py 
+- [x] Fix the TODO's in pace_planner.py 
 - Make streamlit app prettier
-  - Move title to top left 
+  - [x] Move title to top left 
   - Give better descriptions
-  - Convert sidebar to st.form and have analyze button be the trigger there 
+  - [x] Convert sidebar to st.form and have analyze button be the trigger there 
+  - Radio button above Base Pace defining if min/mile or min/km
   - Make output look nice (map as first thing seen, then metrics, then table)
+     - Add st.checkbox above map for inclusion of arrows or not
      - Maybe add some distinction like st.bar so you know you are seeing the output
      - Output df needs to have everything shown if not be scrollable
      - Output to downloadable pdf file
