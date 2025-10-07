@@ -32,7 +32,8 @@
 - More experimentation and understanding of pace functions (VO2, decay)
 - Add negative split possibility to pace calculation
 - Create documentation for everything (Youtube Tutorial Video?) need to link in app 
-- Customer feedback area (where will this go? Google sheets and email notification ?) 
+- Customer feedback area (where will this go? Google sheets and email notification ?)
+- Website metric tracking (how to do for free Google Analytics ?)
 - Upload multiple gpx files and weave together
 - Donation button
 
