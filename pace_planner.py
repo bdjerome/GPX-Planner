@@ -170,16 +170,15 @@ class PaceCalculator:
         # Get total race distance for decay calculation
         total_race_distance = df['total_distance'].max()
 
-        # Example usage with logarithmic decay:
-        base_pace = 6.2  # base pace in min/km (adjust to your target pace)
+        # Use the base_pace provided by the user (not hardcoded)
         df['pace'] = df.apply(
             lambda row: speed_calculation(
-                base_pace, 
+                self.base_pace,  # Use instance variable instead of hardcoded value
                 row['total_distance'], 
                 row['grade'], 
                 total_race_distance,
-                decay=False, 
-                hill_mode=True
+                decay=decay,  # Use parameter passed to method
+                hill_mode=hill_mode  # Use parameter passed to method
             ), 
             axis=1
         )

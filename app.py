@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
+import datetime
 from pace_planner import GPXAnalyzer, PaceCalculator, MapVisualizer
+from misc_functions import convert_to_mph, convert_to_kmh
 
 def main():
     st.set_page_config(layout="wide")
@@ -44,13 +46,46 @@ def main():
         with st.form("pace_analysis_form"):
             st.subheader("Analysis Configuration")
             
-            loops = st.number_input("Number of loops", min_value=1, max_value=5, value=2)
-            base_pace = st.number_input("Base pace (min/km)", min_value=3.0, max_value=15.0, value=6.2, step=0.1)
-            enable_decay = st.checkbox("Enable fatigue decay", value=True)
-            enable_hills = st.checkbox("Enable hill adjustments", value=True)
+            # Basic Settings Container
+            with st.container():
+                st.write("**Basic Settings**")
+                form_col1, form_col2 = st.columns(2)
+                
+                with form_col1:
+                    loops = st.number_input("Number of loops", min_value=1, max_value=5, value=2)
+                    
+                with form_col2:
+                    # radio button defining if min/mile or min/km
+                    pace_unit = st.radio("Pace unit:", ["min/km", "min/mile"])
+            
+            # Pace Settings Container
+            with st.container():
+                st.write("**Pace Configuration**")
+                
+                if pace_unit == "min/km":
+                    pace_time = st.time_input("Base pace (min/km)", datetime.time(0, 6, 12))
+                    # Use hour field as minutes, minute field as seconds
+                    base_pace = pace_time.hour + (pace_time.minute / 60.0)
+                else:  # min/mile
+                    pace_time_miles = st.time_input("Base pace (min/mile)", datetime.time(0, 10, 0))
+                    # Use hour field as minutes, minute field as seconds
+                    pace_minutes = pace_time_miles.hour + (pace_time_miles.minute / 60.0)
+                    base_pace = convert_to_kmh(pace_minutes)
+            
+            # Advanced Options Container
+            with st.container():
+                st.write("**Advanced Options**")
+                adv_col1, adv_col2 = st.columns(2)
+                
+                with adv_col1:
+                    enable_decay = st.checkbox("Enable fatigue decay", value=True)
+                    
+                with adv_col2:
+                    enable_hills = st.checkbox("Enable hill adjustments", value=True)
             
             # Submit button
-            submitted = st.form_submit_button("🚀 Analyze Route", disabled=(selected_file_path is None))
+            st.markdown("---")
+            submitted = st.form_submit_button("🚀 Analyze Route", disabled=(selected_file_path is None), use_container_width=True)
         
     # Process form submission
     if submitted and selected_file_path is not None:

@@ -7,10 +7,12 @@
 - Make streamlit app prettier
   - [x] Move title to top left 
   - Give better descriptions
-  - [x] Convert sidebar to st.form and have analyze button be the trigger there 
-  - Radio button above Base Pace defining if min/mile or min/km
+  - [x]Convert sidebar to st.form and have analyze button be the trigger there 
+  - [x] Radio button above Base Pace defining if min/mile or min/km
+  - [x] convert pace input from integer input to time input
   - Make output look nice (map as first thing seen, then metrics, then table)
      - Add st.checkbox above map for inclusion of arrows or not
+     - For metric outputs show metric units and freedom units
      - Maybe add some distinction like st.bar so you know you are seeing the output
      - Output df needs to have everything shown if not be scrollable
      - Output to downloadable pdf file
