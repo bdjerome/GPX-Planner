@@ -27,6 +27,7 @@
 
 
 #Future Improvements
+- Graphical outputs so users understand how fatigue decay is affecting performance (same with hill adjustment)
 - Ability to add cutoff times to custom markers 
 - More experimentation and understanding of pace functions (VO2, decay)
 - Add negative split possibility to pace calculation
