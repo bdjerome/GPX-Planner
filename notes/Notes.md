@@ -7,7 +7,7 @@
 - Make streamlit app prettier
   - [x] Move title to top left 
   - Give better descriptions
-  - [x]Convert sidebar to st.form and have analyze button be the trigger there 
+  - [x] Convert sidebar to st.form and have analyze button be the trigger there 
   - [x] Radio button above Base Pace defining if min/mile or min/km
   - [x] convert pace input from integer input to time input
   - Make output look nice (map as first thing seen, then metrics, then table)
