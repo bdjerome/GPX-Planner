@@ -1,2 +1,24 @@
 *.html
 temp_route.gpx
+
+# Python cache files
+*.pyc
+*.pyo
+__pycache__/
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg

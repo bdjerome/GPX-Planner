@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 from pace_planner import GPXAnalyzer, PaceCalculator, MapVisualizer
-from misc_functions import convert_to_mph, convert_to_kmh
+from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km, convert_to_miles
 
 def main():
     st.set_page_config(layout="wide")
@@ -89,6 +89,14 @@ def main():
         
     # Process form submission
     if submitted and selected_file_path is not None:
+        # Clear any previous session state data
+        if 'analysis_complete' in st.session_state:
+            del st.session_state.analysis_complete
+        if 'analyzer' in st.session_state:
+            del st.session_state.analyzer
+        if 'current_show_arrows' in st.session_state:
+            del st.session_state.current_show_arrows
+            
         with st.spinner("Processing GPX file..."):
             try:
                 # Initialize analyzer
@@ -106,54 +114,103 @@ def main():
                 )
                 pace_calc.calculate_times()
                 
-                # Display results
-                st.success("Analysis complete!")
-                
-                # Show summary statistics
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    total_distance = analyzer.final_df['total_distance'].max()
-                    st.metric("Total Distance", f"{total_distance:.2f} km", border =True)
-                
-                with col2:
-                    avg_pace = analyzer.final_df['pace'].mean()
-                    st.metric("Average Pace", f"{avg_pace:.2f} min/km", border=True)
-
-                with col3:
-                    finish_time = analyzer.final_df['cumulative_time_hms'].iloc[-1]
-                    st.metric("Estimated Finish Time", finish_time, border=True)
-                
-                # Display pace data
-                st.subheader("Kilometer Splits")
-                km_data = analyzer.final_df[analyzer.final_df['is_km_marker'] == 1][
-                    ['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms']
-                ].head(10)
-                st.dataframe(km_data)
-                
-                # Create and display map
-                st.subheader("Route Map")
-                
-                map_viz = MapVisualizer(analyzer.final_df)
-                map_viz.create_base_map()
-                map_viz.add_kilometer_markers()
-                map_viz.save_map("route_map.html")
-                
-                # Display map in Streamlit
-                with open("route_map.html", "r") as f:
-                    map_html = f.read()
-                st.components.v1.html(map_html, height=600)
-                
-                # Show elevation profile
-                st.subheader("Elevation Profile")
-                st.line_chart(analyzer.final_df[['total_distance', 'elevation']].set_index('total_distance'))
-                
-                # Show pace progression
-                st.subheader("Pace Progression")
-                st.line_chart(analyzer.final_df[['total_distance', 'pace']].set_index('total_distance'))
+                # Store results in session state
+                st.session_state.analysis_complete = True
+                st.session_state.analyzer = analyzer
+                st.session_state.current_show_arrows = True  # Default value
                 
             except Exception as e:
                 st.error(f"Error processing file: {str(e)}")
+                st.session_state.analysis_complete = False
+    
+    # Display results if analysis is complete
+    if st.session_state.get('analysis_complete', False):
+        analyzer = st.session_state.analyzer
+        
+        # Display results
+        st.success("Analysis complete!")
+        
+        # Unit toggle checkbox
+        use_metric = st.checkbox("Use Metric Units", value=True)
+        
+        # Show summary statistics
+        col1, col2, col3, col4 = st.columns(4)
+        
+        # Calculate values once
+        total_distance = analyzer.final_df['total_distance'].max()
+        avg_pace = analyzer.final_df['pace'].mean()
+        finish_time = analyzer.final_df['cumulative_time_hms'].iloc[-1]
+        uphill, downhill = analyzer.gpx_parsed.get_uphill_downhill()
+        total_elevation_gain = uphill * loops if uphill else 0
+        
+        with col1:
+            if use_metric:
+                st.metric("Distance", f"{total_distance:.2f} km", border=True)
+            else:
+                miles_total_distance = convert_to_miles(total_distance)
+                st.metric("Distance", f"{miles_total_distance:.2f} miles", border=True)
+        
+        with col2:
+            if use_metric:
+                st.metric("Average Pace", f"{avg_pace:.2f} min/km", border=True)
+            else:
+                mph_avg_pace = convert_to_mph(avg_pace)
+                st.metric("Average Pace", f"{mph_avg_pace:.2f} min/mile", border=True)
+
+        with col3:
+            st.metric("Estimated Duration", finish_time, border=True)
+            
+        with col4:
+            if use_metric:
+                st.metric("Elevation Gain", f"{total_elevation_gain:.0f} m", border=True)
+            else:
+                elevation_gain_ft = total_elevation_gain * 3.28084  # Convert meters to feet
+                st.metric("Elevation Gain", f"{elevation_gain_ft:.0f} ft", border=True)
+        
+        # Display pace data
+        st.subheader("Kilometer Splits")
+        km_data = analyzer.final_df[analyzer.final_df['is_km_marker'] == 1][
+            ['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms']
+        ].head(10)
+        st.dataframe(km_data)
+        
+        # Create and display map
+        st.subheader("Route Map")
+        
+        show_arrows = st.checkbox("Show directional arrows", value=True)
+        
+        # Only regenerate map if checkbox state changed
+        if ('current_show_arrows' not in st.session_state or 
+            st.session_state.current_show_arrows != show_arrows):
+            
+            # Create map once
+            map_viz = MapVisualizer(analyzer.final_df)
+            map_viz.create_base_map()
+            
+            # Add markers based on user preference
+            if show_arrows:
+                map_viz.add_kilometer_markers_directional()
+            else:
+                map_viz.add_kilometer_markers()
+            
+            # Save map once
+            map_viz.save_map("route_map.html")
+            
+            # Update session state
+            st.session_state.current_show_arrows = show_arrows
+
+        # Display map in Streamlit
+        with open("route_map.html", "r") as f:
+            map_html = f.read()
+        st.components.v1.html(map_html, height=600)
+        
+        # Show elevation profile
+        st.subheader("Elevation Profile")
+        st.line_chart(analyzer.final_df[['total_distance', 'elevation']].set_index('total_distance'))
+        
+        # Show pace progression
+        st.subheader("Pace Progression")
+        st.line_chart(analyzer.final_df[['total_distance', 'pace']].set_index('total_distance'))
     
     elif submitted and selected_file_path is None:
         st.error("Please select a GPX file before analyzing!")

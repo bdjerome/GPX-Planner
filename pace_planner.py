@@ -213,11 +213,42 @@ class MapVisualizer:
     def __init__(self, df):
         self.df = df
         self.map = None
+    
+    def _add_legend(self):
+        """Add a legend showing lap colors to the map"""
+        # Get unique lap numbers from the data
+        if 'lap' in self.df.columns:
+            unique_laps = sorted(self.df['lap'].dropna().unique())
+        else:
+            unique_laps = [1]  # Default to single lap
+        
+        # Color mapping (same as used in marker functions)
+        colors = ['blue', 'green', 'red', 'purple', 'orange']
+        
+        # Build legend HTML
+        legend_items = []
+        for lap in unique_laps:
+            color_index = (int(lap) - 1) % len(colors)
+            color = colors[color_index]
+            legend_items.append(f'&nbsp; Lap {int(lap)} &nbsp; <i class="fa fa-circle" style="color:{color}"></i><br>')
+        
+        legend_html = f'''
+        <div style="position: fixed; 
+             bottom: 50px; left: 50px; width: 150px; height: {60 + len(unique_laps) * 20}px; 
+             border:2px solid grey; z-index:9999; font-size:14px;
+             background-color:white; opacity: 0.9; border-radius: 5px; padding: 10px;">
+             <b>Lap Legend</b> <br>
+             {''.join(legend_items)}
+        </div>
+        '''
+        
+        # Add the legend to the map
+        self.map.get_root().html.add_child(folium.Element(legend_html))
         
     def create_base_map(self):
         # Create basic map with track
         df = self.df
-        m2 = folium.Map(location=[df['latitude'].mean(), df['longitude'].mean()], zoom_start=12)
+        m2 = folium.Map(location=[df['latitude'].mean(), df['longitude'].mean()], zoom_start=14)
 
         # Add the main track
         folium.PolyLine(df[['latitude', 'longitude']].values, color='red', weight=2.5, opacity=1).add_to(m2)
@@ -227,7 +258,7 @@ class MapVisualizer:
 
         self.map = m2
     
-    def add_kilometer_markers(self):
+    def add_kilometer_markers_directional(self):
         # Add directional arrows at kilometer points
         if self.map is None:
             raise ValueError("Map not created yet. Call create_base_map() first.")
@@ -316,6 +347,45 @@ class MapVisualizer:
                     fillColor='red',
                     fillOpacity=0.8
                 ).add_to(m2)
+        
+        # Add legend to show lap colors
+        self._add_legend()
+    
+    def add_kilometer_markers(self):
+        # Add simple circle markers at kilometer points (non-directional)
+        if self.map is None:
+            raise ValueError("Map not created yet. Call create_base_map() first.")
+        
+        #creating local references
+        combined = self.df
+        m2 = self.map
+        
+        # Add kilometer markers with simple circles
+        if 'is_km_marker' not in combined.columns:
+            raise ValueError("is_km_marker does not exist make sure to run analyzer.find_kilometer_markers() first")
+        
+        km_marker_rows = combined[combined['is_km_marker'] == 1].copy()
+
+        for i, (index, row) in enumerate(km_marker_rows.iterrows()):
+            # Dynamic color coding based on lap number
+            colors = ['blue', 'green', 'red', 'purple', 'orange']
+            lap_number = row.get('lap', 1)  # Default to 1 if lap column doesn't exist
+            color_index = (lap_number - 1) % len(colors)  # Cycle through colors
+            color = colors[color_index]
+            
+            # Create simple circle marker
+            folium.CircleMarker(
+                location=[row['latitude'], row['longitude']],
+                radius=4,
+                popup=f"KM {int(row['km_number'])}<br>Distance: {row['total_distance']:.3f} km<br>Elevation: {row['elevation']:.1f} m",
+                color=color,
+                fillColor=color,
+                fillOpacity=1.0,
+                weight=2
+            ).add_to(m2)
+        
+        # Add legend to show lap colors
+        self._add_legend()
             
     def save_map(self, filename):
         # Save map to HTML file

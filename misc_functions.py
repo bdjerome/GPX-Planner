@@ -7,3 +7,11 @@ def convert_to_mph(pace_min_per_km):
 def convert_to_kmh(pace_min_per_mile):
     """Convert pace from min/mile to min/km"""
     return pace_min_per_mile / 1.60934
+
+def convert_to_miles(km):
+    """Convert kilometers to miles"""
+    return km / 1.60934
+
+def convert_to_km(miles):
+    """Convert miles to kilometers"""
+    return miles * 1.60934
