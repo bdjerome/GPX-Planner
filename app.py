@@ -114,15 +114,15 @@ def main():
                 
                 with col1:
                     total_distance = analyzer.final_df['total_distance'].max()
-                    st.metric("Total Distance", f"{total_distance:.2f} km")
+                    st.metric("Total Distance", f"{total_distance:.2f} km", border =True)
                 
                 with col2:
                     avg_pace = analyzer.final_df['pace'].mean()
-                    st.metric("Average Pace", f"{avg_pace:.2f} min/km")
-                
+                    st.metric("Average Pace", f"{avg_pace:.2f} min/km", border=True)
+
                 with col3:
                     finish_time = analyzer.final_df['cumulative_time_hms'].iloc[-1]
-                    st.metric("Estimated Finish Time", finish_time)
+                    st.metric("Estimated Finish Time", finish_time, border=True)
                 
                 # Display pace data
                 st.subheader("Kilometer Splits")

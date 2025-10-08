@@ -24,6 +24,7 @@
 - Allow user to input start time of race
   - Add new columns to final_df that display what time runner will get to each marker
 - More customization to route (reverse loops)
+- Figure out why vancouver gpx doesn't work
 
 
 #Future Improvements
