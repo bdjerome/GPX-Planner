@@ -11,9 +11,9 @@
   - [x] Radio button above Base Pace defining if min/mile or min/km
   - [x] convert pace input from integer input to time input
   - Make output look nice (map as first thing seen, then metrics, then table)
-     - Add st.checkbox above map for inclusion of arrows or not
-     - Add legend for the map
-     - For metric outputs show metric units and freedom units
+     - [x] Add st.checkbox above map for inclusion of arrows or not
+     - [x] Add legend for the map
+     - [x] For metric outputs show metric units and freedom units
      - Maybe add some distinction like st.bar so you know you are seeing the output
      - Output df needs to have everything shown if not be scrollable
      - Output to downloadable pdf file
