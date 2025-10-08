@@ -48,6 +48,10 @@ class GPXAnalyzer:
         # You can then convert these points into a Pandas DataFrame for easier manipulation
         self.df = pd.DataFrame(points, columns=['latitude', 'longitude', 'elevation'])
 
+        #finding elevation data if none given 
+        if self.df['elevation'].isnull().all():
+            self.df['elevation'] = 0
+
     #right now only allows for looping
     def map_adjustment(self, loops: int = 0):
 

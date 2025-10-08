@@ -24,7 +24,6 @@
 - Allow user to input start time of race
   - Add new columns to final_df that display what time runner will get to each marker
 - More customization to route (reverse loops)
-- Figure out why vancouver gpx doesn't work
 
 
 #Future Improvements
@@ -32,6 +31,7 @@
 - Ability to add cutoff times to custom markers 
 - More experimentation and understanding of pace functions (VO2, decay)
 - Add negative split possibility to pace calculation
+- Find a solution to no elevation given (use 3rd party api's ?)
 - Create documentation for everything (Youtube Tutorial Video?) need to link in app 
 - Customer feedback area (where will this go? Google sheets and email notification ?)
 - Website metric tracking (how to do for free Google Analytics ?)
