@@ -248,7 +248,7 @@ class MapVisualizer:
     def create_base_map(self):
         # Create basic map with track
         df = self.df
-        m2 = folium.Map(location=[df['latitude'].mean(), df['longitude'].mean()], zoom_start=14)
+        m2 = folium.Map(location=[df['latitude'][0], df['longitude'][0]], zoom_start=12)
 
         # Add the main track
         folium.PolyLine(df[['latitude', 'longitude']].values, color='red', weight=2.5, opacity=1).add_to(m2)

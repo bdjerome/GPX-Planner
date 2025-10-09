@@ -84,7 +84,7 @@ def main():
                 form_col1, form_col2 = st.columns(2)
                 
                 with form_col1:
-                    loops = st.number_input("Number of loops", min_value=1, max_value=5, value=2)
+                    loops = st.number_input("Number of loops", min_value=1, max_value=5, value=1)
                     
                 with form_col2:
                     # radio button defining if min/mile or min/km
