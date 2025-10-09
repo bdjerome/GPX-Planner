@@ -2,11 +2,11 @@ import streamlit as st
 import pandas as pd
 import datetime
 from pace_planner import GPXAnalyzer, PaceCalculator, MapVisualizer
-from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km, convert_to_miles
+from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km, convert_to_miles, dynamic_input_data_editor, generate_gpx_analysis_pdf
 
 def main():
     st.set_page_config(layout="wide")
-    st.title("GPX Pace Planner 🏃‍♂️")
+    st.title("GPX Pace Planner")
     st.write("Upload a GPX file and analyze your race pace strategy!")
     
     # Create two columns for Route Selection and Analysis Configuration
@@ -34,6 +34,8 @@ def main():
                         del st.session_state.analyzer
                     if 'current_show_arrows' in st.session_state:
                         del st.session_state.current_show_arrows
+                    if 'km_notes' in st.session_state:
+                        del st.session_state.km_notes
                     
                     # Store the new file name
                     st.session_state.last_uploaded_file = current_file_name
@@ -64,6 +66,8 @@ def main():
                             del st.session_state.analyzer
                         if 'current_show_arrows' in st.session_state:
                             del st.session_state.current_show_arrows
+                        if 'km_notes' in st.session_state:
+                            del st.session_state.km_notes
                         
                         # Store the new route name
                         st.session_state.last_selected_route = selected_route
@@ -205,13 +209,79 @@ def main():
         st.subheader("Kilometer Splits")
         km_data = analyzer.final_df[analyzer.final_df['is_km_marker'] == 1][
             ['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms']
-        ]
-        st.dataframe(km_data)
-
-        #may need to use on_change and save the updated df to session state
-        #adding note column 
-        #km_data['Notes'] = ''
-        #TODO edited_df = st.data_editor(km_data, num_rows="fixed", disabled=[col for col in km_data.columns if col not 'Notes'], key='output_data_editor')
+        ].copy()
+        
+        # Initialize or update notes in session state
+        if 'km_notes' not in st.session_state:
+            st.session_state.km_notes = [''] * len(km_data)
+        
+        # Ensure notes list matches current data length
+        if len(st.session_state.km_notes) != len(km_data):
+            # Preserve existing notes when possible, pad with empty strings for new entries
+            old_notes = st.session_state.km_notes.copy()
+            st.session_state.km_notes = [''] * len(km_data)
+            for i in range(min(len(old_notes), len(st.session_state.km_notes))):
+                st.session_state.km_notes[i] = old_notes[i]
+        
+        # Add notes column to dataframe
+        km_data['Notes'] = st.session_state.km_notes
+        
+        # Create data editor using the dynamic wrapper function
+        edited_df = dynamic_input_data_editor(
+            km_data, 
+            key='output_data_editor',
+            num_rows="fixed", 
+            disabled=[col for col in km_data.columns if col != 'Notes'], 
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        # Update session state with the edited notes
+        st.session_state.km_notes = edited_df['Notes'].tolist()
+        
+        # PDF Download Section
+        st.markdown("---")
+        col_download1, col_download2 = st.columns([1, 3])
+        
+        with col_download1:
+            if st.button("Generate PDF Report", use_container_width=True):
+                try:
+                    # Get route name (use uploaded file name or "Saved Route")
+                    if 'last_uploaded_file' in st.session_state:
+                        route_name = st.session_state.last_uploaded_file.replace('.gpx', '')
+                    elif 'last_selected_route' in st.session_state:
+                        route_name = st.session_state.last_selected_route.replace('.gpx', '')
+                    else:
+                        route_name = "GPX Route"
+                    
+                    # Generate PDF
+                    pdf_buffer = generate_gpx_analysis_pdf(
+                        analyzer=analyzer,
+                        km_data=edited_df,  # Use the edited dataframe with notes
+                        total_distance=total_distance,
+                        avg_pace=avg_pace,
+                        finish_time=finish_time,
+                        total_elevation_gain=total_elevation_gain,
+                        use_metric=use_metric,
+                        route_name=route_name
+                    )
+                    
+                    st.success("PDF generated successfully!")
+                    
+                    # Create download button
+                    st.download_button(
+                        label="⬇️ Download Report",
+                        data=pdf_buffer.getvalue(),
+                        file_name=f"{route_name}_pace_analysis.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    
+                except Exception as e:
+                    st.error(f"Error generating PDF: {str(e)}")
+        
+        with col_download2:
+            st.info("The PDF will include all your analysis data, metrics, kilometer splits, and any notes you've added.")
         
         # Create and display map
         st.subheader("Route Map")

@@ -10,13 +10,13 @@
   - [x] Convert sidebar to st.form and have analyze button be the trigger there 
   - [x] Radio button above Base Pace defining if min/mile or min/km
   - [x] convert pace input from integer input to time input
-  - Make output look nice (map as first thing seen, then metrics, then table)
+  - Make output look nice (metrics,then map, then table, then graphs)
      - [x] Add st.checkbox above map for inclusion of arrows or not
      - [x] Add legend for the map
      - [x] For metric outputs show metric units and freedom units
      - Maybe add some distinction like st.bar so you know you are seeing the output
-     - Output df needs to have everything shown if not be scrollable and have note section
-     - Output to downloadable pdf file
+     - [x] Output df needs to have everything shown if not be scrollable and have note section
+     - [x] Output to downloadable pdf file
 - Give more user choice for marker setup 
   - Can select every KM, Half, Quarter
   - Custom inputs (Distance, Nickname)
@@ -29,6 +29,7 @@
 
 
 #Future Improvements
+- Add image of map to the pdf output
 - Graphical outputs so users understand how fatigue decay is affecting performance (same with hill adjustment)
 - Ability to add cutoff times to custom markers 
 - More experimentation and understanding of pace functions (VO2, decay)
