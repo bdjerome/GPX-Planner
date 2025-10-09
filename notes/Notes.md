@@ -15,7 +15,7 @@
      - [x] Add legend for the map
      - [x] For metric outputs show metric units and freedom units
      - Maybe add some distinction like st.bar so you know you are seeing the output
-     - Output df needs to have everything shown if not be scrollable
+     - Output df needs to have everything shown if not be scrollable and have note section
      - Output to downloadable pdf file
 - Give more user choice for marker setup 
   - Can select every KM, Half, Quarter
@@ -32,10 +32,10 @@
 - Ability to add cutoff times to custom markers 
 - More experimentation and understanding of pace functions (VO2, decay)
 - Add negative split possibility to pace calculation
-- Find a solution to no elevation given (use 3rd party api's ?)
 - Create documentation for everything (Youtube Tutorial Video?) need to link in app 
 - Customer feedback area (where will this go? Google sheets and email notification ?)
-- Website metric tracking (how to do for free Google Analytics ?)
+- Website metric tracking (how to do for free PostHog ?)
 - Upload multiple gpx files and weave together
+- Find a solution to no elevation given (use 3rd party api's ?)
 - Donation button
 

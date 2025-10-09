@@ -22,6 +22,22 @@ def main():
         if route_source == "Upload new file":
             uploaded_file = st.file_uploader("Choose a GPX file", type=['gpx'])
             if uploaded_file is not None:
+                # Check if this is a different file than what we had before
+                current_file_name = uploaded_file.name
+                if ('last_uploaded_file' not in st.session_state or 
+                    st.session_state.last_uploaded_file != current_file_name):
+                    
+                    # Clear previous analysis when file changes
+                    if 'analysis_complete' in st.session_state:
+                        del st.session_state.analysis_complete
+                    if 'analyzer' in st.session_state:
+                        del st.session_state.analyzer
+                    if 'current_show_arrows' in st.session_state:
+                        del st.session_state.current_show_arrows
+                    
+                    # Store the new file name
+                    st.session_state.last_uploaded_file = current_file_name
+                
                 # Save uploaded file temporarily
                 with open("temp_route.gpx", "wb") as f:
                     f.write(uploaded_file.getbuffer())
@@ -36,6 +52,22 @@ def main():
                 if gpx_files:
                     selected_route = st.selectbox("Select a saved route:", gpx_files)
                     selected_file_path = os.path.join(saved_routes_dir, selected_route)
+                    
+                    # Check if this is a different saved route
+                    if ('last_selected_route' not in st.session_state or 
+                        st.session_state.last_selected_route != selected_route):
+                        
+                        # Clear previous analysis when route changes
+                        if 'analysis_complete' in st.session_state:
+                            del st.session_state.analysis_complete
+                        if 'analyzer' in st.session_state:
+                            del st.session_state.analyzer
+                        if 'current_show_arrows' in st.session_state:
+                            del st.session_state.current_show_arrows
+                        
+                        # Store the new route name
+                        st.session_state.last_selected_route = selected_route
+                        
                 else:
                     st.warning("No saved routes found. Add GPX files to the 'saved_routes' folder.")
             else:
@@ -118,6 +150,7 @@ def main():
                 st.session_state.analysis_complete = True
                 st.session_state.analyzer = analyzer
                 st.session_state.current_show_arrows = True  # Default value
+                st.session_state.map_needs_regeneration = True  # Force map regeneration
                 
             except Exception as e:
                 st.error(f"Error processing file: {str(e)}")
@@ -125,6 +158,7 @@ def main():
     
     # Display results if analysis is complete
     if st.session_state.get('analysis_complete', False):
+
         analyzer = st.session_state.analyzer
         
         # Display results
@@ -171,17 +205,23 @@ def main():
         st.subheader("Kilometer Splits")
         km_data = analyzer.final_df[analyzer.final_df['is_km_marker'] == 1][
             ['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms']
-        ].head(10)
+        ]
         st.dataframe(km_data)
+
+        #may need to use on_change and save the updated df to session state
+        #adding note column 
+        #km_data['Notes'] = ''
+        #TODO edited_df = st.data_editor(km_data, num_rows="fixed", disabled=[col for col in km_data.columns if col not 'Notes'], key='output_data_editor')
         
         # Create and display map
         st.subheader("Route Map")
         
         show_arrows = st.checkbox("Show directional arrows", value=True)
         
-        # Only regenerate map if checkbox state changed
+        # Regenerate map if checkbox state changed OR if new analysis was run
         if ('current_show_arrows' not in st.session_state or 
-            st.session_state.current_show_arrows != show_arrows):
+            st.session_state.current_show_arrows != show_arrows or
+            st.session_state.get('map_needs_regeneration', False)):
             
             # Create map once
             map_viz = MapVisualizer(analyzer.final_df)
@@ -198,6 +238,7 @@ def main():
             
             # Update session state
             st.session_state.current_show_arrows = show_arrows
+            st.session_state.map_needs_regeneration = False  # Reset flag
 
         # Display map in Streamlit
         with open("route_map.html", "r") as f:
