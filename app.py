@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 from pace_planner import GPXAnalyzer, PaceCalculator, MapVisualizer
-from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km, convert_to_miles, dynamic_input_data_editor, generate_gpx_analysis_pdf
+from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km, convert_to_miles, dynamic_input_data_editor, generate_gpx_analysis_pdf, merge_custom_markers, get_custom_markers_summary
 
 def main():
     st.set_page_config(layout="wide")
@@ -118,6 +118,13 @@ def main():
                     
                 with adv_col2:
                     enable_hills = st.checkbox("Enable hill adjustments", value=True)
+
+            with st.expander("Custom Marker Configuration"):
+                st.write("Add custom markers at specific distances with nicknames.")
+                st.write("E.g., Distance: 5.0, Nickname: 'Water Station'")
+                # Data editor for custom markers
+                custom_marker_distance_type = st.checkbox("Using KM markers?", value=True)
+                custom_marker_data = st.data_editor(pd.DataFrame(columns=["Distance", "Nickname"]), num_rows="dynamic", use_container_width=True)
             
             # Submit button
             st.markdown("---")
@@ -145,10 +152,17 @@ def main():
                 # Calculate pace
                 pace_calc = PaceCalculator(analyzer, base_pace)
                 pace_calc.calculate_pace(
-                    distance=0, grade=0, total_distance=0,
                     decay=enable_decay, hill_mode=enable_hills
                 )
                 pace_calc.calculate_times()
+                
+                # Merge custom markers if provided
+                if not custom_marker_data.empty and len(custom_marker_data) > 0:
+                    analyzer.final_df = merge_custom_markers(
+                        analyzer.final_df, 
+                        custom_marker_data, 
+                        use_km_markers=custom_marker_distance_type
+                    )
                 
                 # Store results in session state
                 st.session_state.analysis_complete = True
@@ -205,11 +219,27 @@ def main():
                 elevation_gain_ft = total_elevation_gain * 3.28084  # Convert meters to feet
                 st.metric("Elevation Gain", f"{elevation_gain_ft:.0f} ft", border=True)
         
-        # Display pace data
+        # Display pace data - use custom markers if they exist, otherwise use km markers
         st.subheader("Kilometer Splits")
-        km_data = analyzer.final_df[analyzer.final_df['is_km_marker'] == 1][
-            ['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms']
-        ].copy()
+        
+        # Check if custom markers exist
+        has_custom_markers = 'custom_marker' in analyzer.final_df.columns and \
+                           analyzer.final_df['custom_marker'].str.strip().ne('').any()
+        
+        if has_custom_markers:
+            # Display custom markers data
+            km_data = analyzer.final_df[
+                (analyzer.final_df['is_km_marker'] == 1) & 
+                (analyzer.final_df['custom_marker'].str.strip() != '')
+            ][['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms', 'custom_marker']].copy()
+            
+            # Rename custom_marker column to something more user-friendly
+            km_data = km_data.rename(columns={'custom_marker': 'Marker'})
+        else:
+            # Display regular km markers
+            km_data = analyzer.final_df[analyzer.final_df['is_km_marker'] == 1][
+                ['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms']
+            ].copy()
         
         # Initialize or update notes in session state
         if 'km_notes' not in st.session_state:

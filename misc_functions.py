@@ -7,6 +7,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.units import inch
 import datetime
+import pandas as pd
+import numpy as np
 
 #convert pace between min/km and min/mile
 def convert_to_mph(pace_min_per_km):
@@ -192,3 +194,111 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, avg_pace, finis
     doc.build(story)
     buffer.seek(0)
     return buffer
+
+def merge_custom_markers(analyzer_final_df, custom_marker_data, use_km_markers=True):
+    """
+    Merge custom markers (like aid stations) with the analyzer's final DataFrame
+    based on the nearest kilometer marker.
+    
+    Args:
+        analyzer_final_df: DataFrame from GPXAnalyzer.final_df
+        custom_marker_data: DataFrame with columns ['Distance', 'Nickname']
+        use_km_markers: Boolean indicating if distances are in km (True) or miles (False)
+    
+    Returns:
+        DataFrame: Updated final_df with custom marker information merged
+    """
+    
+    # Create a copy to avoid modifying the original
+    df = analyzer_final_df.copy()
+    
+    # Initialize custom marker columns if they don't exist
+    if 'custom_marker' not in df.columns:
+        df['custom_marker'] = ''
+    if 'marker_nickname' not in df.columns:
+        df['marker_nickname'] = ''
+    
+    # Return original df if no custom markers provided
+    if custom_marker_data is None or len(custom_marker_data) == 0:
+        return df
+    
+    # Clean and validate custom marker data
+    custom_markers = custom_marker_data.copy()
+    
+    # Remove rows with missing or invalid data
+    custom_markers = custom_markers.dropna(subset=['Distance', 'Nickname'])
+    custom_markers['Distance'] = pd.to_numeric(custom_markers['Distance'], errors='coerce')
+    custom_markers = custom_markers[custom_markers['Distance'] > 0]
+    custom_markers = custom_markers[custom_markers['Nickname'].str.strip() != '']
+    
+    if len(custom_markers) == 0:
+        return df
+    
+    # Convert distances to km if they're in miles
+    if not use_km_markers:
+        custom_markers['Distance'] = custom_markers['Distance'].apply(convert_to_km)
+    
+    # Get only kilometer marker rows for matching
+    km_markers = df[df['is_km_marker'] == 1].copy()
+    
+    if len(km_markers) == 0:
+        return df
+    
+    # For each custom marker, find the nearest kilometer marker
+    for _, marker in custom_markers.iterrows():
+        target_distance = marker['Distance']
+        nickname = marker['Nickname'].strip()
+        
+        # Find the closest km marker by total_distance
+        distances = np.abs(km_markers['total_distance'] - target_distance)
+        closest_idx = distances.idxmin()
+        
+        # Get the km_number of the closest marker
+        closest_km = km_markers.loc[closest_idx, 'km_number']
+        
+        # Update all rows with this km_number to include the custom marker
+        mask = (df['km_number'] == closest_km) & (df['is_km_marker'] == 1)
+        
+        if mask.any():
+            # If there's already a custom marker, append with separator
+            existing_marker = df.loc[mask, 'custom_marker'].iloc[0]
+            existing_nickname = df.loc[mask, 'marker_nickname'].iloc[0]
+            
+            if existing_marker and existing_marker.strip():
+                df.loc[mask, 'custom_marker'] = f"{existing_marker}, {nickname}"
+                df.loc[mask, 'marker_nickname'] = f"{existing_nickname}, {nickname}"
+            else:
+                df.loc[mask, 'custom_marker'] = nickname
+                df.loc[mask, 'marker_nickname'] = nickname
+    
+    return df
+
+def get_custom_markers_summary(analyzer_final_df):
+    """
+    Extract a summary of custom markers from the final DataFrame.
+    
+    Args:
+        analyzer_final_df: DataFrame with merged custom markers
+    
+    Returns:
+        DataFrame: Summary of custom markers with their positions and details
+    """
+    
+    # Filter for km markers that have custom markers
+    custom_marker_rows = analyzer_final_df[
+        (analyzer_final_df['is_km_marker'] == 1) & 
+        (analyzer_final_df['custom_marker'].str.strip() != '')
+    ].copy()
+    
+    if len(custom_marker_rows) == 0:
+        return pd.DataFrame(columns=['KM', 'Distance', 'Marker', 'Pace', 'Time'])
+    
+    # Create summary DataFrame
+    summary = custom_marker_rows[[
+        'km_number', 'total_distance', 'custom_marker', 'pace', 'cumulative_time_hms'
+    ]].copy()
+    
+    summary.columns = ['KM', 'Distance', 'Marker', 'Pace', 'Time']
+    summary = summary.reset_index(drop=True)
+    
+    return summary

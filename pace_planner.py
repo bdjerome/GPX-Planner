@@ -120,7 +120,7 @@ class PaceCalculator:
         self.gpx_analyzer = gpx_analyzer
         self.base_pace = base_pace
         
-    def calculate_pace(self, distance, grade, total_distance, decay=False, hill_mode=False):
+    def calculate_pace(self, decay=False, hill_mode=False):
 
         #creating local reference
         df = self.gpx_analyzer.final_df
