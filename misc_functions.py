@@ -139,29 +139,55 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, avg_pace, finis
     story.append(Paragraph("Kilometer Splits", styles['Heading2']))
     story.append(Spacer(1, 10))
     
-    # Prepare splits data
-    splits_data = [['KM', 'Distance', 'Pace', 'Grade (%)', 'Cumulative Time', 'Notes']]
+    # Check if Marker column exists
+    has_markers = 'Marker' in km_data.columns
+    
+    # Prepare splits data with dynamic headers
+    if has_markers:
+        splits_data = [['KM', 'Distance', 'Pace', 'Grade (%)', 'Cumulative Time', 'Marker', 'Notes']]
+    else:
+        splits_data = [['KM', 'Distance', 'Pace', 'Grade (%)', 'Cumulative Time', 'Notes']]
     
     for _, row in km_data.iterrows():
         km_num = f"{row['km_number']:.0f}"
         
         if use_metric:
             distance = f"{row['total_distance']:.2f} km"
-            pace = f"{row['pace']:.2f} min/km"
         else:
             distance_miles = convert_to_miles(row['total_distance'])
-            pace_mph = convert_to_mph(row['pace'])
             distance = f"{distance_miles:.2f} mi"
-            pace = f"{pace_mph:.2f} min/mi"
+        
+        # Use pace_display if available, otherwise fall back to formatted pace
+        if 'pace_display' in row and pd.notna(row['pace_display']) and str(row['pace_display']).strip():
+            pace = str(row['pace_display'])
+            # Add unit suffix if not already present
+            if use_metric and 'min/km' not in pace:
+                pace += ' min/km'
+            elif not use_metric and 'min/mi' not in pace:
+                pace += ' min/mi'
+        else:
+            # Fallback to manual formatting
+            if use_metric:
+                pace = f"{row['pace']:.2f} min/km"
+            else:
+                pace_mph = convert_to_mph(row['pace'])
+                pace = f"{pace_mph:.2f} min/mi"
         
         grade = f"{row['grade']:.1f}%"
         time = row['cumulative_time_hms']
         notes = row.get('Notes', '') if 'Notes' in row else ''
         
-        splits_data.append([km_num, distance, pace, grade, time, notes])
+        if has_markers:
+            marker = row.get('Marker', '') if 'Marker' in row else ''
+            splits_data.append([km_num, distance, pace, grade, time, marker, notes])
+        else:
+            splits_data.append([km_num, distance, pace, grade, time, notes])
     
     # Create splits table with dynamic column widths
-    col_widths = [0.6*inch, 1*inch, 1*inch, 0.8*inch, 1.2*inch, 2*inch]
+    if has_markers:
+        col_widths = [0.5*inch, 0.9*inch, 0.9*inch, 0.7*inch, 1.1*inch, 1.3*inch, 1.6*inch]
+    else:
+        col_widths = [0.6*inch, 1*inch, 1*inch, 0.8*inch, 1.2*inch, 2*inch]
     splits_table = Table(splits_data, colWidths=col_widths)
     splits_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
