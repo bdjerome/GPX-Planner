@@ -4,11 +4,16 @@ from io import BytesIO
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib.units import inch
 import datetime
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from matplotlib.collections import LineCollection
+import tempfile
+import os
 
 #convert pace between min/km and min/mile
 def convert_to_mph(pace_min_per_km):
@@ -26,6 +31,89 @@ def convert_to_miles(km):
 def convert_to_km(miles):
     """Convert miles to kilometers"""
     return miles * 1.60934
+
+def create_static_map_image(analyzer_df, show_arrows=True, width_inches=8, height_inches=6):
+    """
+    Create a static PNG map image using matplotlib with styling similar to MapVisualizer
+    
+    Args:
+        analyzer_df: DataFrame from GPXAnalyzer with route data
+        show_arrows: Boolean to show directional arrows or simple markers (currently uses circles)
+        width_inches: Width of the image in inches
+        height_inches: Height of the image in inches
+    
+    Returns:
+        BytesIO: PNG image data as bytes
+    """
+    fig, ax = plt.subplots(figsize=(width_inches, height_inches), dpi=120)
+    
+    # Get the route coordinates
+    lats = analyzer_df['latitude'].values
+    lons = analyzer_df['longitude'].values
+    
+    # Plot the main route
+    ax.plot(lons, lats, 'red', linewidth=2.5, alpha=0.9, label='Route')
+    
+    # Add kilometer markers if they exist
+    if 'is_km_marker' in analyzer_df.columns:
+        km_markers = analyzer_df[analyzer_df['is_km_marker'] == 1]
+        
+        # Color coding for different laps (matching MapVisualizer)
+        colors = ['blue', 'green', 'red', 'purple', 'orange']
+        
+        for _, row in km_markers.iterrows():
+            lap_number = row.get('lap', 1)
+            color_index = (int(lap_number) - 1) % len(colors)
+            color = colors[color_index]
+            
+            ax.scatter(row['longitude'], row['latitude'], 
+                      c=color, s=60, zorder=5, edgecolor='white', linewidth=1.5)
+            
+            # Add km number as text
+            ax.annotate(f"{int(row['km_number'])}", 
+                       (row['longitude'], row['latitude']),
+                       xytext=(5, 5), textcoords='offset points',
+                       fontsize=9, fontweight='bold', color='black',
+                       bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
+    
+    # Add start/end marker
+    ax.scatter(lons[0], lats[0], c='green', s=120, marker='s', 
+              zorder=6, edgecolor='white', linewidth=2, label='Start/Finish')
+    
+    # Set equal aspect ratio and adjust bounds
+    ax.set_aspect('equal')
+    
+    # Calculate bounds with some padding
+    lat_range = max(lats) - min(lats)
+    lon_range = max(lons) - min(lons)
+    padding = max(lat_range, lon_range) * 0.1
+    
+    ax.set_xlim(min(lons) - padding, max(lons) + padding)
+    ax.set_ylim(min(lats) - padding, max(lats) + padding)
+    
+    # Add labels and grid
+    ax.set_xlabel('Longitude', fontsize=11)
+    ax.set_ylabel('Latitude', fontsize=11)
+    ax.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
+    ax.legend(loc='upper right', fontsize=10)
+    
+    # Add title
+    ax.set_title('Route Map', fontsize=14, fontweight='bold', pad=20)
+    
+    # Improve styling
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    
+    # Tight layout
+    plt.tight_layout()
+    
+    # Save to BytesIO
+    img_buffer = BytesIO()
+    plt.savefig(img_buffer, format='png', dpi=120, bbox_inches='tight', facecolor='white')
+    img_buffer.seek(0)
+    plt.close(fig)  # Clean up the figure
+    
+    return img_buffer
 
 #wrapper function for st.data_editor to allow dynamic input data
 def dynamic_input_data_editor(data, key, **_kwargs):
@@ -133,7 +221,26 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, avg_pace, finis
     ]))
     
     story.append(summary_table)
-    story.append(Spacer(1, 30))
+    story.append(Spacer(1, 20))
+    
+    # # Add Route Map
+    # story.append(Paragraph("Route Map", styles['Heading2']))
+    # story.append(Spacer(1, 10))
+    
+    # try:
+    #     # Generate the map image using matplotlib
+    #     map_img_buffer = create_static_map_image(analyzer.final_df, show_arrows=True, width_inches=6, height_inches=4.5)
+        
+    #     # Create Image directly from BytesIO buffer (no temporary file needed)
+    #     map_img_buffer.seek(0)  # Reset buffer position
+    #     img = Image(map_img_buffer, width=5*inch, height=3.75*inch)
+    #     story.append(img)
+        
+    # except Exception as e:
+    #     # If map generation fails, add a note about it
+    #     story.append(Paragraph(f"Note: Route map could not be generated ({str(e)})", styles['Normal']))
+    
+    # story.append(Spacer(1, 20))
     
     # Kilometer Splits Table
     story.append(Paragraph("Kilometer Splits", styles['Heading2']))

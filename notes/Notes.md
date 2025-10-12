@@ -19,17 +19,16 @@
      - [x] Output to downloadable pdf file
 - Give more user choice for marker setup 
   - Can select every KM, Half, Quarter
-  - Custom inputs (Distance, Nickname)
+  - [x] Custom inputs (Distance, Nickname)
     - Try to parse waypoints from input gpx files and store these
   - Will need to pass as a dict to MapVisualizer
-  - This will also need to get passed to pace calculator so we know how long to each custom marker
 - Allow user to input start time of race
   - Add new columns to final_df that display what time runner will get to each marker
 - More customization to route (reverse loops)
 
 
 #Future Improvements
-- Add image of map to the pdf output
+- Add image of map to the pdf output (have matplotlib might need selenium workaround)
 - Graphical outputs so users understand how fatigue decay is affecting performance (same with hill adjustment)
 - Ability to add cutoff times to custom markers 
 - More experimentation and understanding of pace functions (VO2, decay)
