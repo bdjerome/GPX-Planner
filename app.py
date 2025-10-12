@@ -241,27 +241,57 @@ def main():
                 ['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms']
             ].copy()
         
+        # Apply unit conversion for display if needed
+        if not use_metric:
+            # Create converted display columns (preserve original data)
+            km_data['total_distance_display'] = km_data['total_distance'].apply(convert_to_miles)
+            km_data['pace_display'] = km_data['pace'].apply(convert_to_mph)
+            
+            # Select columns for display (imperial)
+            display_columns = ['km_number', 'total_distance_display', 'pace_display', 'grade', 'cumulative_time_hms']
+            column_renames = {
+                'total_distance_display': 'total_distance',
+                'pace_display': 'pace'
+            }
+            
+            # Handle custom markers if present
+            if 'Marker' in km_data.columns:
+                display_columns.append('Marker')
+        else:
+            # Use original metric columns
+            display_columns = ['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms']
+            column_renames = {}
+            
+            # Handle custom markers if present
+            if 'Marker' in km_data.columns:
+                display_columns.append('Marker')
+
+        # Create display dataframe with appropriate columns
+        km_data_display = km_data[display_columns].copy()
+        if column_renames:
+            km_data_display = km_data_display.rename(columns=column_renames)
+        
         # Initialize or update notes in session state
         if 'km_notes' not in st.session_state:
-            st.session_state.km_notes = [''] * len(km_data)
+            st.session_state.km_notes = [''] * len(km_data_display)
         
         # Ensure notes list matches current data length
-        if len(st.session_state.km_notes) != len(km_data):
+        if len(st.session_state.km_notes) != len(km_data_display):
             # Preserve existing notes when possible, pad with empty strings for new entries
             old_notes = st.session_state.km_notes.copy()
-            st.session_state.km_notes = [''] * len(km_data)
+            st.session_state.km_notes = [''] * len(km_data_display)
             for i in range(min(len(old_notes), len(st.session_state.km_notes))):
                 st.session_state.km_notes[i] = old_notes[i]
         
-        # Add notes column to dataframe
-        km_data['Notes'] = st.session_state.km_notes
+        # Add notes column to display dataframe
+        km_data_display['Notes'] = st.session_state.km_notes
         
         # Create data editor using the dynamic wrapper function
         edited_df = dynamic_input_data_editor(
-            km_data, 
+            km_data_display, 
             key='output_data_editor',
             num_rows="fixed", 
-            disabled=[col for col in km_data.columns if col != 'Notes'], 
+            disabled=[col for col in km_data_display.columns if col != 'Notes'], 
             use_container_width=True,
             hide_index=True
         )
