@@ -204,7 +204,11 @@ def main():
             else:
                 miles_total_distance = convert_to_miles(total_distance)
                 st.metric("Total Distance", f"{miles_total_distance:.2f} miles", border=True)
-        
+
+        #dummy var creation so pdf function works
+        pace_minutes = 0
+        pace_seconds = 0
+
         with col2:
             if use_metric:
                 # Convert pace to minutes:seconds format
@@ -233,21 +237,56 @@ def main():
         # Check if custom markers exist
         has_custom_markers = 'custom_marker' in analyzer.final_df.columns and \
                            analyzer.final_df['custom_marker'].str.strip().ne('').any()
+
+        # Rounding KM column to 1 decimal place
+        analyzer.final_df['total_distance'] = analyzer.final_df['total_distance'].round(1)
+        
+        # Always get first and last rows (start and finish points)
+        first_row = analyzer.final_df.iloc[[0]].copy()
+        last_row = analyzer.final_df.iloc[[-1]].copy()
+
         
         if has_custom_markers:
             # Display custom markers data
-            km_data = analyzer.final_df[
+            marker_data = analyzer.final_df[
                 (analyzer.final_df['is_km_marker'] == 1) & 
                 (analyzer.final_df['custom_marker'].str.strip() != '')
             ][['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms','clock_time', 'custom_marker']].copy()
+            
+            # Add marker labels to start and finish rows
+            first_row['custom_marker'] = 'START'
+            last_row['custom_marker'] = 'FINISH'
+            
+            # Combine all data: start + markers + finish
+            km_data = pd.concat([first_row, marker_data, last_row], ignore_index=True)
+            
+            # Remove duplicates based on total_distance (in case start/finish coincide with markers)
+            km_data = km_data.drop_duplicates(subset=['total_distance'], keep='first')
+            
+            # Sort by distance to maintain proper order
+            km_data = km_data.sort_values('total_distance').reset_index(drop=True)
             
             # Rename custom_marker column to something more user-friendly
             km_data = km_data.rename(columns={'custom_marker': 'Marker'})
         else:
             # Display regular km markers
-            km_data = analyzer.final_df[analyzer.final_df['is_km_marker'] == 1][
+            marker_data = analyzer.final_df[analyzer.final_df['is_km_marker'] == 1][
                 ['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms', 'clock_time']
             ].copy()
+            
+            # Add marker column for consistency and label start/finish
+            first_row['Marker'] = 'START'
+            last_row['Marker'] = 'FINISH'
+            marker_data['Marker'] = ''  # Empty marker for regular km points
+            
+            # Combine all data: start + markers + finish
+            km_data = pd.concat([first_row, marker_data, last_row], ignore_index=True)
+            
+            # Remove duplicates based on total_distance (in case start/finish coincide with markers)
+            km_data = km_data.drop_duplicates(subset=['total_distance'], keep='first')
+            
+            # Sort by distance to maintain proper order
+            km_data = km_data.sort_values('total_distance').reset_index(drop=True)
         
         # Helper function to convert pace to MM:SS format
         def format_pace(pace_float):
@@ -258,7 +297,7 @@ def main():
         # Apply unit conversion for display if needed
         if not use_metric:
             # Create converted display columns (preserve original data)
-            km_data['distance_display'] = km_data['total_distance'].apply(convert_to_miles)
+            km_data['distance_display'] = km_data['total_distance'].apply(convert_to_miles).round(1)
             km_data['pace_display'] = km_data['pace'].apply(lambda x: format_pace(convert_to_mph(x)))
             
             # Select columns for display (imperial)
@@ -348,7 +387,8 @@ def main():
                     analyzer=analyzer,
                     km_data=pdf_data,  # Use original data with all columns
                     total_distance=total_distance,
-                    avg_pace=avg_pace,
+                    pace_minutes=pace_minutes,
+                    pace_seconds=pace_seconds,
                     finish_time=finish_time,
                     total_elevation_gain=total_elevation_gain,
                     use_metric=use_metric,

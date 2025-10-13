@@ -144,7 +144,7 @@ def dynamic_input_data_editor(data, key, **_kwargs):
     __kwargs.update({'data': data, 'key': key, 'on_change': on_data_editor_changed})
     return st.data_editor(**__kwargs)
 
-def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, avg_pace, finish_time, 
+def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, pace_seconds, finish_time, 
                              total_elevation_gain, use_metric=True, route_name="GPX Route"):
     """
     Generate a PDF report of the GPX analysis results.
@@ -190,14 +190,13 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, avg_pace, finis
     
     if use_metric:
         distance_str = f"{total_distance:.2f} km"
-        pace_str = f"{avg_pace:.2f} min/km"
+        pace_str = f"{pace_minutes}:{pace_seconds:02d} min/km"
         elevation_str = f"{total_elevation_gain:.0f} m"
     else:
         miles_distance = convert_to_miles(total_distance)
-        mph_pace = convert_to_mph(avg_pace)
         elevation_ft = total_elevation_gain * 3.28084
         distance_str = f"{miles_distance:.2f} miles"
-        pace_str = f"{mph_pace:.2f} min/mile"
+        pace_str = f"{pace_minutes}:{pace_seconds:02d} min/mile"
         elevation_str = f"{elevation_ft:.0f} ft"
     
     summary_data = [

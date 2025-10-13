@@ -19,7 +19,7 @@
      - [x] Output to downloadable pdf file
 - Give more user choice for marker setup 
   - [x] Custom inputs (Distance, Nickname)
-  - Automatically add Start and Finish points to the output table
+  - [x] Automatically add Start and Finish points to the output table
   - In output table what is grade # displaying ?
 - [x] Allow user to input start time of race
   - [x] Add new columns to final_df that display what time runner will get to each marker
