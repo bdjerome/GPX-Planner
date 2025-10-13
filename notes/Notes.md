@@ -25,6 +25,7 @@
   - [x] Add new columns to final_df that display what time runner will get to each marker
 - [x] update elevation output graph 
 - update pace progression output graph 
+- Move how to use to top of page
 
 
 #Future Improvements
