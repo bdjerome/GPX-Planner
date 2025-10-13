@@ -100,6 +100,7 @@ def main():
                 
                 # Single time input that works for both units
                 pace_time = st.time_input("Base pace (min:sec)", datetime.time(6, 12, 0))
+                race_start = st.time_input("Race start time", None, step=300)
             
             # Advanced Options Container
             with st.container():
@@ -156,6 +157,7 @@ def main():
                     decay=enable_decay, hill_mode=enable_hills
                 )
                 pace_calc.calculate_times()
+                pace_calc.calculate_clock_times(race_start)
                 
                 # Merge custom markers if provided
                 if not custom_marker_data.empty and len(custom_marker_data) > 0:
@@ -237,14 +239,14 @@ def main():
             km_data = analyzer.final_df[
                 (analyzer.final_df['is_km_marker'] == 1) & 
                 (analyzer.final_df['custom_marker'].str.strip() != '')
-            ][['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms', 'custom_marker']].copy()
+            ][['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms','clock_time', 'custom_marker']].copy()
             
             # Rename custom_marker column to something more user-friendly
             km_data = km_data.rename(columns={'custom_marker': 'Marker'})
         else:
             # Display regular km markers
             km_data = analyzer.final_df[analyzer.final_df['is_km_marker'] == 1][
-                ['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms']
+                ['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms', 'clock_time']
             ].copy()
         
         # Helper function to convert pace to MM:SS format
@@ -260,12 +262,13 @@ def main():
             km_data['pace_display'] = km_data['pace'].apply(lambda x: format_pace(convert_to_mph(x)))
             
             # Select columns for display (imperial)
-            display_columns = ['distance_display', 'pace_display', 'grade', 'cumulative_time_hms']
+            display_columns = ['distance_display', 'pace_display', 'grade', 'cumulative_time_hms', 'clock_time']
             column_renames = {
                 'distance_display': 'Miles',
                 'pace_display': 'Pace (min/mile)',
                 'grade': 'Grade (%)',
-                'cumulative_time_hms': 'Time'
+                'cumulative_time_hms': 'Duration',
+                'clock_time': 'Clock Time'
             }
             
             # Handle custom markers if present
@@ -276,12 +279,13 @@ def main():
             km_data['pace_display'] = km_data['pace'].apply(format_pace)
             
             # Use metric columns
-            display_columns = ['total_distance', 'pace_display', 'grade', 'cumulative_time_hms']
+            display_columns = ['total_distance', 'pace_display', 'grade', 'cumulative_time_hms', 'clock_time']
             column_renames = {
                 'total_distance': 'KM',
                 'pace_display': 'Pace (min/km)',
                 'grade': 'Grade (%)',
-                'cumulative_time_hms': 'Time'
+                'cumulative_time_hms': 'Duration',
+                'clock_time': 'Clock Time'
             }
             
             # Handle custom markers if present
