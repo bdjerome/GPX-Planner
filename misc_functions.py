@@ -34,7 +34,7 @@ def convert_to_km(miles):
 
 def create_static_map_image(analyzer_df, show_arrows=True, width_inches=8, height_inches=6):
     """
-    Create a static PNG map image using matplotlib with styling similar to MapVisualizer
+    Create a stylized PNG map image using matplotlib without axes or grid
     
     Args:
         analyzer_df: DataFrame from GPXAnalyzer with route data
@@ -45,67 +45,57 @@ def create_static_map_image(analyzer_df, show_arrows=True, width_inches=8, heigh
     Returns:
         BytesIO: PNG image data as bytes
     """
-    fig, ax = plt.subplots(figsize=(width_inches, height_inches), dpi=120)
+    fig, ax = plt.subplots(figsize=(width_inches, height_inches), dpi=150, facecolor='white')
     
     # Get the route coordinates
     lats = analyzer_df['latitude'].values
     lons = analyzer_df['longitude'].values
     
-    # Plot the main route
-    ax.plot(lons, lats, 'red', linewidth=2.5, alpha=0.9, label='Route')
+    # Create a gradient effect along the route
+    points = np.array([lons, lats]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
     
-    # Add kilometer markers if they exist
-    if 'is_km_marker' in analyzer_df.columns:
-        km_markers = analyzer_df[analyzer_df['is_km_marker'] == 1]
-        
-        # Color coding for different laps (matching MapVisualizer)
-        colors = ['blue', 'green', 'red', 'purple', 'orange']
-        
-        for _, row in km_markers.iterrows():
-            lap_number = row.get('lap', 1)
-            color_index = (int(lap_number) - 1) % len(colors)
-            color = colors[color_index]
-            
-            ax.scatter(row['longitude'], row['latitude'], 
-                      c=color, s=60, zorder=5, edgecolor='white', linewidth=1.5)
-            
-            # Add km number as text
-            ax.annotate(f"{int(row['km_number'])}", 
-                       (row['longitude'], row['latitude']),
-                       xytext=(5, 5), textcoords='offset points',
-                       fontsize=9, fontweight='bold', color='black',
-                       bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
+    # Create colors that transition from blue to red along the route
+    n_segments = len(segments)
+    colors_gradient = plt.cm.viridis(np.linspace(0, 1, n_segments))
     
-    # Add start/end marker
-    ax.scatter(lons[0], lats[0], c='green', s=120, marker='s', 
-              zorder=6, edgecolor='white', linewidth=2, label='Start/Finish')
+    # Create line collection with gradient colors
+    lc = LineCollection(segments, colors=colors_gradient, linewidths=4, alpha=0.8)
+    line = ax.add_collection(lc)
+    
+    # Add start marker (green circle)
+    ax.scatter(lons[0], lats[0], c='#2ECC71', s=200, marker='o', 
+              zorder=6, edgecolor='white', linewidth=3, alpha=0.9)
+    
+    # Add finish marker (red square) - only if different from start
+    if len(lons) > 1 and (lons[0] != lons[-1] or lats[0] != lats[-1]):
+        ax.scatter(lons[-1], lats[-1], c='#E74C3C', s=200, marker='s', 
+                  zorder=6, edgecolor='white', linewidth=3, alpha=0.9)
     
     # Set equal aspect ratio and adjust bounds
     ax.set_aspect('equal')
     
-    # Calculate bounds with some padding
+    # Calculate bounds with minimal padding for a cleaner look
     lat_range = max(lats) - min(lats)
     lon_range = max(lons) - min(lons)
-    padding = max(lat_range, lon_range) * 0.1
+    padding = max(lat_range, lon_range) * 0.05  # Reduced padding
     
     ax.set_xlim(min(lons) - padding, max(lons) + padding)
     ax.set_ylim(min(lats) - padding, max(lats) + padding)
     
-    # Add labels and grid
-    ax.set_xlabel('Longitude', fontsize=11)
-    ax.set_ylabel('Latitude', fontsize=11)
-    ax.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
-    ax.legend(loc='upper right', fontsize=10)
-    
-    # Add title
-    ax.set_title('Route Map', fontsize=14, fontweight='bold', pad=20)
-    
-    # Improve styling
+    # Remove all axes, labels, ticks, and spines for a clean look
+    ax.set_xticks([])
+    ax.set_yticks([])
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
     
-    # Tight layout
-    plt.tight_layout()
+    # Set background color
+    ax.set_facecolor('white')
+    
+    # Remove any margins
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
     
     # Save to BytesIO
     img_buffer = BytesIO()
@@ -177,6 +167,33 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, p
     )
     story.append(Paragraph(f"GPX Pace Analysis Report", title_style))
     story.append(Paragraph(f"Route: {route_name}", styles['Heading2']))
+    story.append(Spacer(1, 15))
+    
+    # Add Route Map right after title
+    try:
+        # Generate the stylized map image using matplotlib
+        map_img_buffer = create_static_map_image(analyzer.final_df, show_arrows=True, width_inches=6, height_inches=3)
+        
+        # Create Image directly from BytesIO buffer (no temporary file needed)
+        map_img_buffer.seek(0)  # Reset buffer position
+        img = Image(map_img_buffer, width=4.5*inch, height=2.25*inch)
+        
+        # Center the image
+        from reportlab.platypus import KeepTogether
+        from reportlab.lib.enums import TA_CENTER
+        
+        # Create a table to center the image
+        img_table = Table([[img]], colWidths=[4.5*inch])
+        img_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(img_table)
+        
+    except Exception as e:
+        # If map generation fails, add a note about it
+        story.append(Paragraph(f"Route visualization unavailable", styles['Normal']))
+    
     story.append(Spacer(1, 20))
     
     # Generation date
@@ -221,25 +238,6 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, p
     
     story.append(summary_table)
     story.append(Spacer(1, 20))
-    
-    # # Add Route Map
-    # story.append(Paragraph("Route Map", styles['Heading2']))
-    # story.append(Spacer(1, 10))
-    
-    # try:
-    #     # Generate the map image using matplotlib
-    #     map_img_buffer = create_static_map_image(analyzer.final_df, show_arrows=True, width_inches=6, height_inches=4.5)
-        
-    #     # Create Image directly from BytesIO buffer (no temporary file needed)
-    #     map_img_buffer.seek(0)  # Reset buffer position
-    #     img = Image(map_img_buffer, width=5*inch, height=3.75*inch)
-    #     story.append(img)
-        
-    # except Exception as e:
-    #     # If map generation fails, add a note about it
-    #     story.append(Paragraph(f"Note: Route map could not be generated ({str(e)})", styles['Normal']))
-    
-    # story.append(Spacer(1, 20))
     
     # Kilometer Splits Table
     story.append(Paragraph("Kilometer Splits", styles['Heading2']))
@@ -320,7 +318,7 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, p
         alignment=1,  # Center alignment
         textColor=colors.grey
     )
-    story.append(Paragraph("Generated by GPX Pace Planner", footer_style))
+    story.append(Paragraph("Generated by GPX Pace Planner. Created by Brandon Jerome", footer_style))
     
     # Build PDF
     doc.build(story)

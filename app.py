@@ -260,11 +260,18 @@ def main():
             # Combine all data: start + markers + finish
             km_data = pd.concat([first_row, marker_data, last_row], ignore_index=True)
             
-            # Remove duplicates based on total_distance (in case start/finish coincide with markers)
+            # Sort by distance first, then by marker priority (START/FINISH over custom markers)
+            # Create a priority column for sorting: START=1, FINISH=1, custom markers=2
+            km_data['_sort_priority'] = km_data['custom_marker'].apply(
+                lambda x: 1 if x in ['START', 'FINISH'] else 2
+            )
+            km_data = km_data.sort_values(['total_distance', '_sort_priority']).reset_index(drop=True)
+            
+            # Remove duplicates based on total_distance, keeping first (which will be START/FINISH due to priority)
             km_data = km_data.drop_duplicates(subset=['total_distance'], keep='first')
             
-            # Sort by distance to maintain proper order
-            km_data = km_data.sort_values('total_distance').reset_index(drop=True)
+            # Clean up the temporary sort column
+            km_data = km_data.drop('_sort_priority', axis=1)
             
             # Rename custom_marker column to something more user-friendly
             km_data = km_data.rename(columns={'custom_marker': 'Marker'})
@@ -282,11 +289,18 @@ def main():
             # Combine all data: start + markers + finish
             km_data = pd.concat([first_row, marker_data, last_row], ignore_index=True)
             
-            # Remove duplicates based on total_distance (in case start/finish coincide with markers)
+            # Sort by distance first, then by marker priority (START/FINISH over empty strings)
+            # Create a priority column for sorting: START=1, FINISH=1, empty=2
+            km_data['_sort_priority'] = km_data['Marker'].apply(
+                lambda x: 1 if x in ['START', 'FINISH'] else 2
+            )
+            km_data = km_data.sort_values(['total_distance', '_sort_priority']).reset_index(drop=True)
+            
+            # Remove duplicates based on total_distance, keeping first (which will be START/FINISH due to priority)
             km_data = km_data.drop_duplicates(subset=['total_distance'], keep='first')
             
-            # Sort by distance to maintain proper order
-            km_data = km_data.sort_values('total_distance').reset_index(drop=True)
+            # Clean up the temporary sort column
+            km_data = km_data.drop('_sort_priority', axis=1)
         
         # Helper function to convert pace to MM:SS format
         def format_pace(pace_float):
