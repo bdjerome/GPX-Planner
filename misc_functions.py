@@ -446,7 +446,6 @@ def plotly_elevation_plot(analyzer):
             elevation_df,
             x='total_distance',
             y='elevation',
-            title='Elevation Profile',
             labels={
                 'total_distance': 'Distance (km)',
                 'elevation': 'Elevation (m)'
@@ -455,7 +454,6 @@ def plotly_elevation_plot(analyzer):
         )
         elevation_plot.update_traces(line=dict(color='#3498DB', width=2))
         elevation_plot.update_layout(
-            title={'x':0.5, 'xanchor': 'center'},
             plot_bgcolor='white',
             xaxis=dict(showgrid=True, gridcolor='lightgrey', zeroline=False),
             yaxis=dict(showgrid=True, gridcolor='lightgrey', zeroline=False)
