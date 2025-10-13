@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 from pace_planner import GPXAnalyzer, PaceCalculator, MapVisualizer
-from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km, convert_to_miles, dynamic_input_data_editor, generate_gpx_analysis_pdf, merge_custom_markers, get_custom_markers_summary
+from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km, convert_to_miles, dynamic_input_data_editor, generate_gpx_analysis_pdf, merge_custom_markers, plotly_elevation_plot
 
 def main():
     st.set_page_config(layout="wide")
@@ -458,8 +458,12 @@ def main():
         
         # Show elevation profile
         st.subheader("Elevation Profile")
-        st.line_chart(analyzer.final_df[['total_distance', 'elevation']].set_index('total_distance'))
-        
+        elevation_plot = plotly_elevation_plot(analyzer)
+        if elevation_plot:
+            st.plotly_chart(elevation_plot)
+        else:
+            st.write("No elevation data available to display.")
+
         # Show pace progression
         st.subheader("Pace Progression")
         st.line_chart(analyzer.final_df[['total_distance', 'pace']].set_index('total_distance'))

@@ -12,6 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.collections import LineCollection
+import plotly.express as px
 import tempfile
 import os
 
@@ -432,3 +433,35 @@ def get_custom_markers_summary(analyzer_final_df):
     summary = summary.reset_index(drop=True)
     
     return summary
+
+def plotly_elevation_plot(analyzer):
+    "create elevation plot using plotly for output"
+
+    elevation_df = analyzer.final_df[['total_distance', 'elevation']].copy()
+    elevation_df = elevation_df.dropna(subset=['elevation'])
+
+    #creating plotly chart if elevation data exists
+    if len(elevation_df) > 1:
+        elevation_plot = px.line(
+            elevation_df,
+            x='total_distance',
+            y='elevation',
+            title='Elevation Profile',
+            labels={
+                'total_distance': 'Distance (km)',
+                'elevation': 'Elevation (m)'
+            },
+            height=300
+        )
+        elevation_plot.update_traces(line=dict(color='#3498DB', width=2))
+        elevation_plot.update_layout(
+            title={'x':0.5, 'xanchor': 'center'},
+            plot_bgcolor='white',
+            xaxis=dict(showgrid=True, gridcolor='lightgrey', zeroline=False),
+            yaxis=dict(showgrid=True, gridcolor='lightgrey', zeroline=False)
+        )
+    else:
+        elevation_plot = None
+
+
+    return elevation_plot
