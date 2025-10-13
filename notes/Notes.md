@@ -23,6 +23,8 @@
   - In output table what is grade # displaying ?
 - [x] Allow user to input start time of race
   - [x] Add new columns to final_df that display what time runner will get to each marker
+- [x] update elevation output graph 
+- update pace progression output graph 
 
 
 #Future Improvements
