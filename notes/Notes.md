@@ -24,8 +24,9 @@
 - [x] Allow user to input start time of race
   - [x] Add new columns to final_df that display what time runner will get to each marker
 - [x] update elevation output graph 
-- update pace progression output graph 
-- Move how to use to top of page
+- [x] update pace progression output graph 
+- [x] Move how to use to top of page
+- Wrap text in pdf notes column if needed (would generating as excel be easier)
 
 
 #Future Improvements

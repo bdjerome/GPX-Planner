@@ -2,12 +2,27 @@ import streamlit as st
 import pandas as pd
 import datetime
 from pace_planner import GPXAnalyzer, PaceCalculator, MapVisualizer
-from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km, convert_to_miles, dynamic_input_data_editor, generate_gpx_analysis_pdf, merge_custom_markers, plotly_elevation_plot
+from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km,\
+    convert_to_miles, dynamic_input_data_editor, generate_gpx_analysis_pdf \
+        , merge_custom_markers, plotly_elevation_plot, plotly_pace_plot
 
 def main():
     st.set_page_config(layout="wide")
     st.title("GPX Pace Planner")
-    st.write("Upload a GPX file and analyze your race pace strategy!")
+    st.write("Upload a GPX file, analyze your race pace strategy, and optionally generate a pdf report!")
+
+    with st.expander(label='Usage Instructions', expanded=True):
+        # Show sample data or instructions
+        st.subheader("How to use:")
+        st.markdown("""
+                    1. Upload or select a saved GPX route file
+        2. Configure the number of loops and your target pace
+        3. Enter the time your race starts
+        4. Optionally
+            - Alter pace by enabling fatigue decay and hill adjustments as needed
+            - Input custom markers with nicknames (aid stations, planned meetups, etc.)
+        4. Click 'Analyze Route' to see your pace strategy!
+                    """)
     
     # Create two columns for Route Selection and Analysis Configuration
     main_col1, main_col2 = st.columns(2)
@@ -458,7 +473,7 @@ def main():
         
         # Show elevation profile
         st.subheader("Elevation Profile")
-        elevation_plot = plotly_elevation_plot(analyzer)
+        elevation_plot = plotly_elevation_plot(analyzer, total_elevation_gain)
         if elevation_plot:
             st.plotly_chart(elevation_plot)
         else:
@@ -466,22 +481,17 @@ def main():
 
         # Show pace progression
         st.subheader("Pace Progression")
-        st.line_chart(analyzer.final_df[['total_distance', 'pace']].set_index('total_distance'))
+        pace_plot = plotly_pace_plot(analyzer)
+        if pace_plot:
+            st.plotly_chart(pace_plot)
+        else:
+            st.write("No elevation data available to display.")
     
     elif submitted and selected_file_path is None:
-        st.error("Please select a GPX file before analyzing!")
-    
+        st.error("Please select a GPX file before analyzing ")
     else:
-        st.info("Please upload a GPX file to get started.")
-        
-        # Show sample data or instructions
-        st.subheader("How to use:")
-        st.write("""
-        1. Upload your GPX route file
-        2. Configure the number of loops and your target pace
-        3. Enable decay and hill adjustments as needed
-        4. Click 'Analyze Route' to see your pace strategy!
-        """)
+        st.info("Please select a GPX file before analyzing!")
+
 
 if __name__ == "__main__":
     main()

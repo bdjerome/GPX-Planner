@@ -241,7 +241,7 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, p
     story.append(Spacer(1, 20))
     
     # Kilometer Splits Table
-    story.append(Paragraph("Kilometer Splits", styles['Heading2']))
+    story.append(Paragraph("Pace Splits", styles['Heading2']))
     story.append(Spacer(1, 10))
     
     # Check if Marker column exists
@@ -249,9 +249,9 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, p
     
     # Prepare splits data with dynamic headers
     if has_markers:
-        splits_data = [['KM', 'Distance', 'Pace', 'Grade (%)', 'Cumulative Time', 'Marker', 'Notes']]
+        splits_data = [['KM', 'Distance', 'Pace', 'Grade (%)', 'Duration','Clock Time', 'Marker', 'Notes']]
     else:
-        splits_data = [['KM', 'Distance', 'Pace', 'Grade (%)', 'Cumulative Time', 'Notes']]
+        splits_data = [['KM', 'Distance', 'Pace', 'Grade (%)', 'Duration','Clock Time', 'Notes']]
     
     for _, row in km_data.iterrows():
         km_num = f"{row['km_number']:.0f}"
@@ -280,19 +280,20 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, p
         
         grade = f"{row['grade']:.1f}%"
         time = row['cumulative_time_hms']
+        clock_time = row['clock_time']
         notes = row.get('Notes', '') if 'Notes' in row else ''
         
         if has_markers:
             marker = row.get('Marker', '') if 'Marker' in row else ''
-            splits_data.append([km_num, distance, pace, grade, time, marker, notes])
+            splits_data.append([km_num, distance, pace, grade, time,clock_time, marker, notes])
         else:
-            splits_data.append([km_num, distance, pace, grade, time, notes])
+            splits_data.append([km_num, distance, pace, grade, time,clock_time, notes])
     
     # Create splits table with dynamic column widths
     if has_markers:
-        col_widths = [0.5*inch, 0.9*inch, 0.9*inch, 0.7*inch, 1.1*inch, 1.3*inch, 1.6*inch]
+        col_widths = [0.5*inch, 0.9*inch, 0.9*inch, 0.7*inch,0.7*inch, 1.1*inch, 1*inch, 1.6*inch]
     else:
-        col_widths = [0.6*inch, 1*inch, 1*inch, 0.8*inch, 1.2*inch, 2*inch]
+        col_widths = [0.6*inch, 1*inch, 1*inch, 0.8*inch, 0.8*inch, 1.2*inch, 2*inch]
     splits_table = Table(splits_data, colWidths=col_widths)
     splits_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
@@ -434,14 +435,14 @@ def get_custom_markers_summary(analyzer_final_df):
     
     return summary
 
-def plotly_elevation_plot(analyzer):
+def plotly_elevation_plot(analyzer, total_elevation_gain):
     "create elevation plot using plotly for output"
 
     elevation_df = analyzer.final_df[['total_distance', 'elevation']].copy()
     elevation_df = elevation_df.dropna(subset=['elevation'])
 
     #creating plotly chart if elevation data exists
-    if len(elevation_df) > 1:
+    if total_elevation_gain > 0:
         elevation_plot = px.line(
             elevation_df,
             x='total_distance',
@@ -463,3 +464,35 @@ def plotly_elevation_plot(analyzer):
 
 
     return elevation_plot
+
+
+def plotly_pace_plot(analyzer):
+    "create pace plot used in the streamlit output"
+
+    pace_df = analyzer.final_df[['total_distance', 'pace']].copy()
+    pace_df = pace_df.dropna(subset=['pace'])
+
+    #creating plotly chart if elevation data exists
+    if len(pace_df) > 1:
+        pace_plot = px.line(
+            pace_df,
+            x='total_distance',
+            y='pace',
+            labels={
+                'total_distance': 'Distance (km)',
+                'pace': 'Pace'
+            },
+            height=300
+        )
+        pace_plot.update_traces(line=dict(color='#3498DB', width=2))
+        pace_plot.update_layout(
+            plot_bgcolor='white',
+            xaxis=dict(showgrid=True, gridcolor='lightgrey', zeroline=False),
+            yaxis=dict(showgrid=True, gridcolor='lightgrey', zeroline=False)
+        )
+    else:
+        pace_plot = None
+
+
+
+    return pace_plot
