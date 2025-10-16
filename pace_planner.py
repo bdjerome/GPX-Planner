@@ -1,4 +1,5 @@
 #Map package
+import datetime
 import gpxpy
 from geopy.distance import geodesic
 
@@ -120,7 +121,7 @@ class PaceCalculator:
         self.gpx_analyzer = gpx_analyzer
         self.base_pace = base_pace
         
-    def calculate_pace(self, distance, grade, total_distance, decay=False, hill_mode=False):
+    def calculate_pace(self, decay=False, hill_mode=False):
 
         #creating local reference
         df = self.gpx_analyzer.final_df
@@ -208,6 +209,20 @@ class PaceCalculator:
         df['cumulative_time_hms'] = df['cumulative_time'].apply(minutes_to_hms)
 
         self.gpx_analyzer.final_df = df
+
+    def calculate_clock_times(self, race_start_time):
+        # Calculate clock times based on race start time
+        df = self.gpx_analyzer.final_df
+        # Ensure race_start_time is a datetime.time object
+        if not isinstance(race_start_time, datetime.time):
+            raise ValueError("race_start_time must be a datetime.time object")
+        
+        df['clock_time'] = df['cumulative_time'].apply(
+            lambda x: (datetime.datetime.combine(datetime.date.today(), race_start_time) + datetime.timedelta(minutes=x)).strftime('%H:%M:%S')
+        )
+
+        self.gpx_analyzer.final_df = df
+
 
 class MapVisualizer:
     def __init__(self, df):

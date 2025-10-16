@@ -18,22 +18,29 @@
      - [x] Output df needs to have everything shown if not be scrollable and have note section
      - [x] Output to downloadable pdf file
 - Give more user choice for marker setup 
-  - Can select every KM, Half, Quarter
-  - Custom inputs (Distance, Nickname)
-    - Try to parse waypoints from input gpx files and store these
-  - Will need to pass as a dict to MapVisualizer
-  - This will also need to get passed to pace calculator so we know how long to each custom marker
-- Allow user to input start time of race
-  - Add new columns to final_df that display what time runner will get to each marker
-- More customization to route (reverse loops)
+  - [x] Custom inputs (Distance, Nickname)
+  - [x] Automatically add Start and Finish points to the output table
+  - In output table what is grade # displaying ?
+- [x] Allow user to input start time of race
+  - [x] Add new columns to final_df that display what time runner will get to each marker
+- [x] update elevation output graph 
+- [x] update pace progression output graph 
+- [x] Move how to use to top of page
+- Wrap text in pdf notes column if needed (would generating as excel be easier)
 
 
 #Future Improvements
-- Add image of map to the pdf output
+- Add image of map to the pdf output (have matplotlib might need selenium workaround)
 - Graphical outputs so users understand how fatigue decay is affecting performance (same with hill adjustment)
 - Ability to add cutoff times to custom markers 
+- Give more user choice for marker setup 
+  - Can select every KM, Half, Quarter
+    - Try to parse waypoints from input gpx files and store these
+  - Will need to pass as a dict to MapVisualizer
 - More experimentation and understanding of pace functions (VO2, decay)
-- Add negative split possibility to pace calculation
+- More customization to route creation 
+  - Reverse Loops
+  - Add negative split possibility to pace calculation
 - Create documentation for everything (Youtube Tutorial Video?) need to link in app 
 - Customer feedback area (where will this go? Google sheets and email notification ?)
 - Website metric tracking (how to do for free PostHog ?)

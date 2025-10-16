@@ -2,12 +2,27 @@ import streamlit as st
 import pandas as pd
 import datetime
 from pace_planner import GPXAnalyzer, PaceCalculator, MapVisualizer
-from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km, convert_to_miles, dynamic_input_data_editor, generate_gpx_analysis_pdf
+from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km,\
+    convert_to_miles, dynamic_input_data_editor, generate_gpx_analysis_pdf \
+        , merge_custom_markers, plotly_elevation_plot, plotly_pace_plot
 
 def main():
     st.set_page_config(layout="wide")
     st.title("GPX Pace Planner")
-    st.write("Upload a GPX file and analyze your race pace strategy!")
+    st.write("Upload a GPX file, analyze your race pace strategy, and optionally generate a pdf report!")
+
+    with st.expander(label='Usage Instructions', expanded=True):
+        # Show sample data or instructions
+        st.subheader("How to use:")
+        st.markdown("""
+                    1. Upload or select a saved GPX route file
+        2. Configure the number of loops and your target pace
+        3. Enter the time your race starts
+        4. Optionally
+            - Alter pace by enabling fatigue decay and hill adjustments as needed
+            - Input custom markers with nicknames (aid stations, planned meetups, etc.)
+        4. Click 'Analyze Route' to see your pace strategy!
+                    """)
     
     # Create two columns for Route Selection and Analysis Configuration
     main_col1, main_col2 = st.columns(2)
@@ -98,15 +113,9 @@ def main():
             with st.container():
                 st.write("**Pace Configuration**")
                 
-                if pace_unit == "min/km":
-                    pace_time = st.time_input("Base pace (min/km)", datetime.time(0, 6, 12))
-                    # Use hour field as minutes, minute field as seconds
-                    base_pace = pace_time.hour + (pace_time.minute / 60.0)
-                else:  # min/mile
-                    pace_time_miles = st.time_input("Base pace (min/mile)", datetime.time(0, 10, 0))
-                    # Use hour field as minutes, minute field as seconds
-                    pace_minutes = pace_time_miles.hour + (pace_time_miles.minute / 60.0)
-                    base_pace = convert_to_kmh(pace_minutes)
+                # Single time input that works for both units
+                pace_time = st.time_input("Base pace (min:sec)", datetime.time(6, 12, 0))
+                race_start = st.time_input("Race start time", None, step=300)
             
             # Advanced Options Container
             with st.container():
@@ -118,6 +127,13 @@ def main():
                     
                 with adv_col2:
                     enable_hills = st.checkbox("Enable hill adjustments", value=True)
+
+            with st.expander("Custom Marker Configuration"):
+                st.write("Add custom markers at specific distances with nicknames.")
+                st.write("E.g., Distance: 5.0, Nickname: 'Water Station'")
+                # Data editor for custom markers
+                custom_marker_distance_type = st.checkbox("Using KM markers?", value=True)
+                custom_marker_data = st.data_editor(pd.DataFrame(columns=["Distance", "Nickname"]), num_rows="dynamic", use_container_width=True)
             
             # Submit button
             st.markdown("---")
@@ -125,6 +141,14 @@ def main():
         
     # Process form submission
     if submitted and selected_file_path is not None:
+        # Process pace input outside form to avoid reset issues
+        pace_minutes = pace_time.hour + (pace_time.minute / 60.0)
+        # Convert to km/h if needed (our internal format is always min/km)
+        if pace_unit == "min/mile":
+            base_pace = convert_to_kmh(pace_minutes)
+        else:
+            base_pace = pace_minutes
+            
         # Clear any previous session state data
         if 'analysis_complete' in st.session_state:
             del st.session_state.analysis_complete
@@ -145,10 +169,18 @@ def main():
                 # Calculate pace
                 pace_calc = PaceCalculator(analyzer, base_pace)
                 pace_calc.calculate_pace(
-                    distance=0, grade=0, total_distance=0,
                     decay=enable_decay, hill_mode=enable_hills
                 )
                 pace_calc.calculate_times()
+                pace_calc.calculate_clock_times(race_start)
+                
+                # Merge custom markers if provided
+                if not custom_marker_data.empty and len(custom_marker_data) > 0:
+                    analyzer.final_df = merge_custom_markers(
+                        analyzer.final_df, 
+                        custom_marker_data, 
+                        use_km_markers=custom_marker_distance_type
+                    )
                 
                 # Store results in session state
                 st.session_state.analysis_complete = True
@@ -183,17 +215,26 @@ def main():
         
         with col1:
             if use_metric:
-                st.metric("Distance", f"{total_distance:.2f} km", border=True)
+                st.metric("Total Distance", f"{total_distance:.2f} km", border=True)
             else:
                 miles_total_distance = convert_to_miles(total_distance)
-                st.metric("Distance", f"{miles_total_distance:.2f} miles", border=True)
-        
+                st.metric("Total Distance", f"{miles_total_distance:.2f} miles", border=True)
+
+        #dummy var creation so pdf function works
+        pace_minutes = 0
+        pace_seconds = 0
+
         with col2:
             if use_metric:
-                st.metric("Average Pace", f"{avg_pace:.2f} min/km", border=True)
+                # Convert pace to minutes:seconds format
+                pace_minutes = int(avg_pace)
+                pace_seconds = int((avg_pace - pace_minutes) * 60)
+                st.metric("Average Pace", f"{pace_minutes}:{pace_seconds:02d} min/km", border=True)
             else:
                 mph_avg_pace = convert_to_mph(avg_pace)
-                st.metric("Average Pace", f"{mph_avg_pace:.2f} min/mile", border=True)
+                pace_minutes = int(mph_avg_pace)
+                pace_seconds = int((mph_avg_pace - pace_minutes) * 60)
+                st.metric("Average Pace", f"{pace_minutes}:{pace_seconds:02d} min/mile", border=True)
 
         with col3:
             st.metric("Estimated Duration", finish_time, border=True)
@@ -205,33 +246,146 @@ def main():
                 elevation_gain_ft = total_elevation_gain * 3.28084  # Convert meters to feet
                 st.metric("Elevation Gain", f"{elevation_gain_ft:.0f} ft", border=True)
         
-        # Display pace data
-        st.subheader("Kilometer Splits")
-        km_data = analyzer.final_df[analyzer.final_df['is_km_marker'] == 1][
-            ['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms']
-        ].copy()
+        # Display pace data - use custom markers if they exist, otherwise use km markers
+        st.subheader("Pace Data")
+        
+        # Check if custom markers exist
+        has_custom_markers = 'custom_marker' in analyzer.final_df.columns and \
+                           analyzer.final_df['custom_marker'].str.strip().ne('').any()
+
+        # Rounding KM column to 1 decimal place
+        analyzer.final_df['total_distance'] = analyzer.final_df['total_distance'].round(1)
+        
+        # Always get first and last rows (start and finish points)
+        first_row = analyzer.final_df.iloc[[0]].copy()
+        last_row = analyzer.final_df.iloc[[-1]].copy()
+
+        
+        if has_custom_markers:
+            # Display custom markers data
+            marker_data = analyzer.final_df[
+                (analyzer.final_df['is_km_marker'] == 1) & 
+                (analyzer.final_df['custom_marker'].str.strip() != '')
+            ][['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms','clock_time', 'custom_marker']].copy()
+            
+            # Add marker labels to start and finish rows
+            first_row['custom_marker'] = 'START'
+            last_row['custom_marker'] = 'FINISH'
+            
+            # Combine all data: start + markers + finish
+            km_data = pd.concat([first_row, marker_data, last_row], ignore_index=True)
+            
+            # Sort by distance first, then by marker priority (START/FINISH over custom markers)
+            # Create a priority column for sorting: START=1, FINISH=1, custom markers=2
+            km_data['_sort_priority'] = km_data['custom_marker'].apply(
+                lambda x: 1 if x in ['START', 'FINISH'] else 2
+            )
+            km_data = km_data.sort_values(['total_distance', '_sort_priority']).reset_index(drop=True)
+            
+            # Remove duplicates based on total_distance, keeping first (which will be START/FINISH due to priority)
+            km_data = km_data.drop_duplicates(subset=['total_distance'], keep='first')
+            
+            # Clean up the temporary sort column
+            km_data = km_data.drop('_sort_priority', axis=1)
+            
+            # Rename custom_marker column to something more user-friendly
+            km_data = km_data.rename(columns={'custom_marker': 'Marker'})
+        else:
+            # Display regular km markers
+            marker_data = analyzer.final_df[analyzer.final_df['is_km_marker'] == 1][
+                ['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms', 'clock_time']
+            ].copy()
+            
+            # Add marker column for consistency and label start/finish
+            first_row['Marker'] = 'START'
+            last_row['Marker'] = 'FINISH'
+            marker_data['Marker'] = ''  # Empty marker for regular km points
+            
+            # Combine all data: start + markers + finish
+            km_data = pd.concat([first_row, marker_data, last_row], ignore_index=True)
+            
+            # Sort by distance first, then by marker priority (START/FINISH over empty strings)
+            # Create a priority column for sorting: START=1, FINISH=1, empty=2
+            km_data['_sort_priority'] = km_data['Marker'].apply(
+                lambda x: 1 if x in ['START', 'FINISH'] else 2
+            )
+            km_data = km_data.sort_values(['total_distance', '_sort_priority']).reset_index(drop=True)
+            
+            # Remove duplicates based on total_distance, keeping first (which will be START/FINISH due to priority)
+            km_data = km_data.drop_duplicates(subset=['total_distance'], keep='first')
+            
+            # Clean up the temporary sort column
+            km_data = km_data.drop('_sort_priority', axis=1)
+        
+        # Helper function to convert pace to MM:SS format
+        def format_pace(pace_float):
+            minutes = int(pace_float)
+            seconds = int((pace_float - minutes) * 60)
+            return f"{minutes}:{seconds:02d}"
+        
+        # Apply unit conversion for display if needed
+        if not use_metric:
+            # Create converted display columns (preserve original data)
+            km_data['distance_display'] = km_data['total_distance'].apply(convert_to_miles).round(1)
+            km_data['pace_display'] = km_data['pace'].apply(lambda x: format_pace(convert_to_mph(x)))
+            
+            # Select columns for display (imperial)
+            display_columns = ['distance_display', 'pace_display', 'grade', 'cumulative_time_hms', 'clock_time']
+            column_renames = {
+                'distance_display': 'Miles',
+                'pace_display': 'Pace (min/mile)',
+                'grade': 'Grade (%)',
+                'cumulative_time_hms': 'Duration',
+                'clock_time': 'Clock Time'
+            }
+            
+            # Handle custom markers if present
+            if 'Marker' in km_data.columns:
+                display_columns.append('Marker')
+        else:
+            # Create formatted pace for metric display
+            km_data['pace_display'] = km_data['pace'].apply(format_pace)
+            
+            # Use metric columns
+            display_columns = ['total_distance', 'pace_display', 'grade', 'cumulative_time_hms', 'clock_time']
+            column_renames = {
+                'total_distance': 'KM',
+                'pace_display': 'Pace (min/km)',
+                'grade': 'Grade (%)',
+                'cumulative_time_hms': 'Duration',
+                'clock_time': 'Clock Time'
+            }
+            
+            # Handle custom markers if present
+            if 'Marker' in km_data.columns:
+                display_columns.append('Marker')
+
+        # Create display dataframe with appropriate columns
+        km_data_display = km_data[display_columns].copy()
+        if column_renames:
+            km_data_display = km_data_display.rename(columns=column_renames)
         
         # Initialize or update notes in session state
         if 'km_notes' not in st.session_state:
-            st.session_state.km_notes = [''] * len(km_data)
+            st.session_state.km_notes = [''] * len(km_data_display)
         
         # Ensure notes list matches current data length
-        if len(st.session_state.km_notes) != len(km_data):
+        if len(st.session_state.km_notes) != len(km_data_display):
             # Preserve existing notes when possible, pad with empty strings for new entries
             old_notes = st.session_state.km_notes.copy()
-            st.session_state.km_notes = [''] * len(km_data)
+            st.session_state.km_notes = [''] * len(km_data_display)
             for i in range(min(len(old_notes), len(st.session_state.km_notes))):
                 st.session_state.km_notes[i] = old_notes[i]
         
-        # Add notes column to dataframe
-        km_data['Notes'] = st.session_state.km_notes
+        # Add notes column to display dataframe
+        km_data_display['Notes'] = st.session_state.km_notes
         
         # Create data editor using the dynamic wrapper function
         edited_df = dynamic_input_data_editor(
-            km_data, 
+            km_data_display, 
             key='output_data_editor',
             num_rows="fixed", 
-            disabled=[col for col in km_data.columns if col != 'Notes'], 
+            disabled=[col for col in km_data_display.columns if col != 'Notes'], 
             use_container_width=True,
             hide_index=True
         )
@@ -244,44 +398,46 @@ def main():
         col_download1, col_download2 = st.columns([1, 3])
         
         with col_download1:
-            if st.button("Generate PDF Report", use_container_width=True):
-                try:
-                    # Get route name (use uploaded file name or "Saved Route")
-                    if 'last_uploaded_file' in st.session_state:
-                        route_name = st.session_state.last_uploaded_file.replace('.gpx', '')
-                    elif 'last_selected_route' in st.session_state:
-                        route_name = st.session_state.last_selected_route.replace('.gpx', '')
-                    else:
-                        route_name = "GPX Route"
-                    
-                    # Generate PDF
-                    pdf_buffer = generate_gpx_analysis_pdf(
-                        analyzer=analyzer,
-                        km_data=edited_df,  # Use the edited dataframe with notes
-                        total_distance=total_distance,
-                        avg_pace=avg_pace,
-                        finish_time=finish_time,
-                        total_elevation_gain=total_elevation_gain,
-                        use_metric=use_metric,
-                        route_name=route_name
-                    )
-                    
-                    st.success("PDF generated successfully!")
-                    
-                    # Create download button
-                    st.download_button(
-                        label="⬇️ Download Report",
-                        data=pdf_buffer.getvalue(),
-                        file_name=f"{route_name}_pace_analysis.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-                    
-                except Exception as e:
-                    st.error(f"Error generating PDF: {str(e)}")
+            # Get route name (use uploaded file name or "Saved Route")
+            if 'last_uploaded_file' in st.session_state:
+                route_name = st.session_state.last_uploaded_file.replace('.gpx', '')
+            elif 'last_selected_route' in st.session_state:
+                route_name = st.session_state.last_selected_route.replace('.gpx', '')
+            else:
+                route_name = "GPX Route"
+            
+            try:
+                # Prepare PDF data with original columns plus notes
+                pdf_data = km_data.copy()
+                pdf_data['Notes'] = st.session_state.km_notes
+                
+                # Generate PDF
+                pdf_buffer = generate_gpx_analysis_pdf(
+                    analyzer=analyzer,
+                    km_data=pdf_data,  # Use original data with all columns
+                    total_distance=total_distance,
+                    pace_minutes=pace_minutes,
+                    pace_seconds=pace_seconds,
+                    finish_time=finish_time,
+                    total_elevation_gain=total_elevation_gain,
+                    use_metric=use_metric,
+                    route_name=route_name
+                )
+                
+                # Single download button that generates and downloads
+                st.download_button(
+                    label="📄 Generate & Download PDF Report",
+                    data=pdf_buffer.getvalue(),
+                    file_name=f"{route_name}_pace_analysis.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+                
+            except Exception as e:
+                st.error(f"Error generating PDF: {str(e)}")
         
         with col_download2:
-            st.info("The PDF will include all your analysis data, metrics, kilometer splits, and any notes you've added.")
+            st.info("💡 Click to generate and download your complete pace analysis report with all data, metrics, and notes.")
         
         # Create and display map
         st.subheader("Route Map")
@@ -317,26 +473,25 @@ def main():
         
         # Show elevation profile
         st.subheader("Elevation Profile")
-        st.line_chart(analyzer.final_df[['total_distance', 'elevation']].set_index('total_distance'))
-        
+        elevation_plot = plotly_elevation_plot(analyzer, total_elevation_gain)
+        if elevation_plot:
+            st.plotly_chart(elevation_plot)
+        else:
+            st.write("No elevation data available to display.")
+
         # Show pace progression
         st.subheader("Pace Progression")
-        st.line_chart(analyzer.final_df[['total_distance', 'pace']].set_index('total_distance'))
+        pace_plot = plotly_pace_plot(analyzer)
+        if pace_plot:
+            st.plotly_chart(pace_plot)
+        else:
+            st.write("No elevation data available to display.")
     
     elif submitted and selected_file_path is None:
-        st.error("Please select a GPX file before analyzing!")
-    
+        st.error("Please select a GPX file before analyzing ")
     else:
-        st.info("Please upload a GPX file to get started.")
-        
-        # Show sample data or instructions
-        st.subheader("How to use:")
-        st.write("""
-        1. Upload your GPX route file
-        2. Configure the number of loops and your target pace
-        3. Enable decay and hill adjustments as needed
-        4. Click 'Analyze Route' to see your pace strategy!
-        """)
+        st.info("Please select a GPX file before analyzing!")
+
 
 if __name__ == "__main__":
     main()
