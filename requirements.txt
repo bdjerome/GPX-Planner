@@ -5,3 +5,5 @@ numpy
 gpxpy
 geopy
 matplotlib
+reportlab
+plotly

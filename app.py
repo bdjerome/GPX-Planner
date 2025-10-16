@@ -129,7 +129,7 @@ def main():
                     enable_hills = st.checkbox("Enable hill adjustments", value=True)
 
             with st.expander("Custom Marker Configuration"):
-                st.write("Add custom markers at specific distances with nicknames.")
+                st.write("Add custom markers at specific distances with nicknames. These will be used for output in the pace table.")
                 st.write("E.g., Distance: 5.0, Nickname: 'Water Station'")
                 # Data editor for custom markers
                 custom_marker_distance_type = st.checkbox("Using KM markers?", value=True)
