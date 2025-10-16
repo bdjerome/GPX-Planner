@@ -30,7 +30,10 @@
 
 
 #Future Improvements
-- Add image of map to the pdf output (have matplotlib might need selenium workaround)
+- Add elevation drop
+- Create documentation for everything (Youtube Tutorial Video?) need to link in app 
+- Customer feedback area (where will this go? Google sheets and email notification ?)
+- Website metric tracking (how to do for free PostHog ?)
 - Graphical outputs so users understand how fatigue decay is affecting performance (same with hill adjustment)
 - Ability to add cutoff times to custom markers 
 - Give more user choice for marker setup 
@@ -38,12 +41,10 @@
     - Try to parse waypoints from input gpx files and store these
   - Will need to pass as a dict to MapVisualizer
 - More experimentation and understanding of pace functions (VO2, decay)
+- Add image of map to the pdf output (have matplotlib might need selenium workaround)
 - More customization to route creation 
   - Reverse Loops
   - Add negative split possibility to pace calculation
-- Create documentation for everything (Youtube Tutorial Video?) need to link in app 
-- Customer feedback area (where will this go? Google sheets and email notification ?)
-- Website metric tracking (how to do for free PostHog ?)
 - Upload multiple gpx files and weave together
 - Find a solution to no elevation given (use 3rd party api's ?)
 - Donation button
