@@ -31,7 +31,7 @@
 
 #Future Improvements
 - [x] Add elevation drop
-- Ability to add cutoff times to custom markers 
+- [x] Ability to add cutoff times to custom markers 
 - Create documentation for everything (Youtube Tutorial Video?) need to link in app 
 - Customer feedback area (where will this go? Google sheets and email notification ?)
 - Website metric tracking (how to do for free PostHog ?)
