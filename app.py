@@ -129,8 +129,8 @@ def main():
                     enable_hills = st.checkbox("Enable hill adjustments", value=True)
 
             with st.expander("Custom Marker Configuration"):
-                st.write("Add custom markers at specific distances with nicknames. These will be used for output in the pace table.")
-                st.write("E.g., Distance: 5.0, Nickname: 'Water Station'")
+                st.write("Add custom markers at specific distances with nicknames and optional cutoff times. These will be used for output in the pace table.")
+                st.write("E.g., Distance: 5.0, Nickname: Water Station, Cutoff Time: 10:00:00")
                 # Data editor for custom markers
                 custom_marker_distance_type = st.checkbox("Using KM markers?", value=True)
                 custom_marker_data = st.data_editor(pd.DataFrame(columns=["Distance", "Nickname","Cutoff Time"]), num_rows="dynamic", use_container_width=True)
@@ -181,6 +181,10 @@ def main():
                         custom_marker_data, 
                         use_km_markers=custom_marker_distance_type
                     )
+                    
+                    # Calculate cutoff buffer if cutoff times exist
+                    if 'cutoff_time_formatted' in analyzer.final_df.columns:
+                        analyzer.final_df['cutoff_buffer_minutes'] = analyzer.final_df.apply(calculate_time_difference, axis=1)
                 
                 # Store results in session state
                 st.session_state.analysis_complete = True
@@ -264,13 +268,6 @@ def main():
 
         
         if has_custom_markers:
-            #if cutoff times exist, show those too
-            if 'cutoff_time_formatted' in analyzer.final_df.columns and \
-               analyzer.final_df['cutoff_time_formatted'].notna().any():
-                
-                # Apply the calculation to create the new column using imported function
-                analyzer.final_df['cutoff_buffer_minutes'] = analyzer.final_df.apply(calculate_time_difference, axis=1)
-
             #changing output to show cutoff times if they exist
             if 'cutoff_buffer_minutes' in analyzer.final_df.columns:
                 # Display custom markers data with cutoff buffer
@@ -289,6 +286,19 @@ def main():
             # Add marker labels to start and finish rows
             first_row['custom_marker'] = 'START'
             last_row['custom_marker'] = 'FINISH'
+            
+            # Ensure START and FINISH rows have cutoff columns if they exist in marker_data
+            if 'cutoff_time_formatted' in marker_data.columns:
+                if 'cutoff_time_formatted' not in first_row.columns:
+                    first_row['cutoff_time_formatted'] = pd.NA
+                if 'cutoff_time_formatted' not in last_row.columns:
+                    last_row['cutoff_time_formatted'] = pd.NA
+                    
+            if 'cutoff_buffer_minutes' in marker_data.columns:
+                if 'cutoff_buffer_minutes' not in first_row.columns:
+                    first_row['cutoff_buffer_minutes'] = pd.NA
+                if 'cutoff_buffer_minutes' not in last_row.columns:
+                    last_row['cutoff_buffer_minutes'] = pd.NA
             
             # Combine all data: start + markers + finish
             km_data = pd.concat([first_row, marker_data, last_row], ignore_index=True)
@@ -318,6 +328,23 @@ def main():
             first_row['Marker'] = 'START'
             last_row['Marker'] = 'FINISH'
             marker_data['Marker'] = ''  # Empty marker for regular km points
+            
+            # Ensure START and FINISH rows have cutoff columns if they exist in original data
+            if 'cutoff_time_formatted' in analyzer.final_df.columns:
+                if 'cutoff_time_formatted' not in first_row.columns:
+                    first_row['cutoff_time_formatted'] = pd.NA
+                if 'cutoff_time_formatted' not in last_row.columns:
+                    last_row['cutoff_time_formatted'] = pd.NA
+                if 'cutoff_time_formatted' not in marker_data.columns:
+                    marker_data['cutoff_time_formatted'] = pd.NA
+                    
+            if 'cutoff_buffer_minutes' in analyzer.final_df.columns:
+                if 'cutoff_buffer_minutes' not in first_row.columns:
+                    first_row['cutoff_buffer_minutes'] = pd.NA
+                if 'cutoff_buffer_minutes' not in last_row.columns:
+                    last_row['cutoff_buffer_minutes'] = pd.NA
+                if 'cutoff_buffer_minutes' not in marker_data.columns:
+                    marker_data['cutoff_buffer_minutes'] = pd.NA
             
             # Combine all data: start + markers + finish
             km_data = pd.concat([first_row, marker_data, last_row], ignore_index=True)
@@ -362,8 +389,7 @@ def main():
                 display_columns.append('Marker')
                 
             # Add cutoff time columns if they exist
-            if 'cutoff_time_formatted' in km_data.columns and \
-               km_data['cutoff_time_formatted'].notna().any():
+            if 'cutoff_time_formatted' in km_data.columns:
                 display_columns.extend(['cutoff_time_formatted', 'cutoff_buffer_minutes'])
                 column_renames.update({
                     'cutoff_time_formatted': 'Cutoff Time',
@@ -389,8 +415,7 @@ def main():
                 display_columns.append('Marker')
                 
             # Add cutoff time columns if they exist
-            if 'cutoff_time_formatted' in km_data.columns and \
-               km_data['cutoff_time_formatted'].notna().any():
+            if 'cutoff_time_formatted' in km_data.columns:
                 display_columns.extend(['cutoff_time_formatted', 'cutoff_buffer_minutes'])
                 column_renames.update({
                     'cutoff_time_formatted': 'Cutoff Time',

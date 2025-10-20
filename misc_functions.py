@@ -192,6 +192,22 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, p
     styles = getSampleStyleSheet()
     story = []
     
+    # Clean up NA values in cutoff columns before processing
+    km_data = km_data.copy()  # Don't modify the original
+    if 'cutoff_time_formatted' in km_data.columns:
+        # Replace all NA variants with empty strings
+        km_data['cutoff_time_formatted'] = km_data['cutoff_time_formatted'].apply(
+            lambda x: '' if (x is pd.NA or pd.isna(x) or x == pd.NaT or 
+                           (hasattr(x, '_instance') and str(x) == '<NA>')) else x
+        )
+    
+    if 'cutoff_buffer_minutes' in km_data.columns:
+        # Replace all NA variants with empty strings
+        km_data['cutoff_buffer_minutes'] = km_data['cutoff_buffer_minutes'].apply(
+            lambda x: '' if (x is pd.NA or pd.isna(x) or 
+                           (hasattr(x, '_instance') and str(x) == '<NA>')) else x
+        )
+    
     # Title
     title_style = ParagraphStyle(
         'CustomTitle',
@@ -494,8 +510,8 @@ def merge_custom_markers(analyzer_final_df, custom_marker_data, use_km_markers=T
     if len(km_markers) == 0:
         return df
     
-    # Initialize cutoff_time_formatted column in main df if cutoff times exist
-    if 'cutoff_time_formatted' in custom_markers.columns:
+    # Initialize cutoff_time_formatted column in main df if cutoff times exist in input
+    if 'Cutoff Time' in custom_marker_data.columns:
         if 'cutoff_time_formatted' not in df.columns:
             df['cutoff_time_formatted'] = pd.NA
 
@@ -527,8 +543,8 @@ def merge_custom_markers(analyzer_final_df, custom_marker_data, use_km_markers=T
                 df.loc[mask, 'custom_marker'] = nickname
                 df.loc[mask, 'marker_nickname'] = nickname
             
-            # Add cutoff time if it exists and column is available
-            if pd.notna(cutoff_time) and 'cutoff_time_formatted' in df.columns:
+            # Add cutoff time if column is available (even if cutoff_time is NA)
+            if 'cutoff_time_formatted' in df.columns:
                 df.loc[mask, 'cutoff_time_formatted'] = cutoff_time
     
     return df
