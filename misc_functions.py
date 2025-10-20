@@ -187,7 +187,8 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, p
         BytesIO object containing the PDF data
     """
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=0.5*inch, rightMargin=0.5*inch, 
+                           topMargin=0.75*inch, bottomMargin=0.75*inch)
     styles = getSampleStyleSheet()
     story = []
     
@@ -277,14 +278,23 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, p
     story.append(Paragraph("Pace Splits", styles['Heading2']))
     story.append(Spacer(1, 10))
     
-    # Check if Marker column exists
+    # Check which optional columns exist
     has_markers = 'Marker' in km_data.columns
+    has_cutoff_time = 'cutoff_time_formatted' in km_data.columns
+    has_cutoff_buffer = 'cutoff_buffer_minutes' in km_data.columns
     
-    # Prepare splits data with dynamic headers
+    # Build dynamic headers based on available columns (removed KM column)
+    headers = ['Distance', 'Pace', 'Grade (%)', 'Duration', 'Clock Time']
+    
+    if has_cutoff_time:
+        headers.append('Cutoff Time')
+    if has_cutoff_buffer:
+        headers.append('Cutoff Buffer (min)')
     if has_markers:
-        splits_data = [['KM', 'Distance', 'Pace', 'Grade (%)', 'Duration','Clock Time', 'Marker', 'Notes']]
-    else:
-        splits_data = [['KM', 'Distance', 'Pace', 'Grade (%)', 'Duration','Clock Time', 'Notes']]
+        headers.append('Marker')
+    
+    headers.append('Notes')
+    splits_data = [headers]
     
     for _, row in km_data.iterrows():
         km_num = f"{row['km_number']:.0f}"
@@ -316,6 +326,30 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, p
         clock_time = row['clock_time']
         notes_text = row.get('Notes', '') if 'Notes' in row else ''
         
+        # Build row data dynamically based on available columns (removed km_num)
+        row_data = [distance, pace, grade, time, clock_time]
+        
+        # Add cutoff time if available
+        if has_cutoff_time:
+            cutoff_time = row.get('cutoff_time_formatted', '') if 'cutoff_time_formatted' in row else ''
+            if cutoff_time == pd.NaT or pd.isna(cutoff_time):
+                cutoff_time = ''
+            row_data.append(cutoff_time)
+        
+        # Add cutoff buffer if available
+        if has_cutoff_buffer:
+            cutoff_buffer = row.get('cutoff_buffer_minutes', '') if 'cutoff_buffer_minutes' in row else ''
+            if pd.notna(cutoff_buffer) and cutoff_buffer != '':
+                cutoff_buffer = f"{cutoff_buffer}"
+            else:
+                cutoff_buffer = ''
+            row_data.append(cutoff_buffer)
+        
+        # Add marker if available
+        if has_markers:
+            marker = row.get('Marker', '') if 'Marker' in row else ''
+            row_data.append(marker)
+        
         # Create a wrapped paragraph for notes if there's text
         if notes_text and str(notes_text).strip():
             # Create a paragraph style for notes with smaller font and wrapping
@@ -331,27 +365,35 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, p
         else:
             notes = ''
         
-        if has_markers:
-            marker = row.get('Marker', '') if 'Marker' in row else ''
-            splits_data.append([km_num, distance, pace, grade, time,clock_time, marker, notes])
-        else:
-            splits_data.append([km_num, distance, pace, grade, time,clock_time, notes])
+        row_data.append(notes)
+        splits_data.append(row_data)
     
-    # Create splits table with dynamic column widths
+    # Create splits table with simplified column widths (removed KM column)
+    # Start with base column widths - now 5 columns instead of 6
+    col_widths = [1.0*inch, 0.8*inch, 0.6*inch, 0.7*inch, 0.9*inch]  # Base 5 columns
+    
+    # Add optional columns with wider fixed widths
+    if has_cutoff_time:
+        col_widths.append(0.9*inch)  # Increased from 0.7
+    if has_cutoff_buffer:
+        col_widths.append(1.0*inch)  # Increased from 0.7 for "Cutoff Buffer (min)"
     if has_markers:
-        col_widths = [0.5*inch, 0.9*inch, 0.9*inch, 0.7*inch,0.7*inch, 1.1*inch, 1*inch, 1.6*inch]
-    else:
-        col_widths = [0.6*inch, 1*inch, 1*inch, 0.8*inch, 0.8*inch, 1.2*inch, 2*inch]
+        col_widths.append(0.8*inch)
+    
+    # Always add Notes column last
+    col_widths.append(1.3*inch)  # Slightly increased Notes width
+    
     splits_table = Table(splits_data, colWidths=col_widths)
-    # Determine notes column index based on whether markers are present
-    notes_col_index = 7 if has_markers else 6
+    
+    # Calculate notes column index (always last)
+    notes_col_index = len(col_widths) - 1
     
     splits_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
         ('FONTSIZE', (0, 1), (-1, -1), 8),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
