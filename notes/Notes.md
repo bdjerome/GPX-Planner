@@ -26,16 +26,16 @@
 - [x] update elevation output graph 
 - [x] update pace progression output graph 
 - [x] Move how to use to top of page
-- Wrap text in pdf notes column if needed (would generating as excel be easier)
+- [x] Wrap text in pdf notes column if needed (would generating as excel be easier)
 
 
 #Future Improvements
-- Add elevation drop
+- [x] Add elevation drop
+- Ability to add cutoff times to custom markers 
 - Create documentation for everything (Youtube Tutorial Video?) need to link in app 
 - Customer feedback area (where will this go? Google sheets and email notification ?)
 - Website metric tracking (how to do for free PostHog ?)
 - Graphical outputs so users understand how fatigue decay is affecting performance (same with hill adjustment)
-- Ability to add cutoff times to custom markers 
 - Give more user choice for marker setup 
   - Can select every KM, Half, Quarter
     - Try to parse waypoints from input gpx files and store these

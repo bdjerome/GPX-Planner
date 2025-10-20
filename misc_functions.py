@@ -281,7 +281,22 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, p
         grade = f"{row['grade']:.1f}%"
         time = row['cumulative_time_hms']
         clock_time = row['clock_time']
-        notes = row.get('Notes', '') if 'Notes' in row else ''
+        notes_text = row.get('Notes', '') if 'Notes' in row else ''
+        
+        # Create a wrapped paragraph for notes if there's text
+        if notes_text and str(notes_text).strip():
+            # Create a paragraph style for notes with smaller font and wrapping
+            notes_style = ParagraphStyle(
+                'NotesStyle',
+                parent=styles['Normal'],
+                fontSize=7,
+                leading=8,
+                alignment=0,  # Left alignment
+                wordWrap='LTR'
+            )
+            notes = Paragraph(str(notes_text).strip(), notes_style)
+        else:
+            notes = ''
         
         if has_markers:
             marker = row.get('Marker', '') if 'Marker' in row else ''
@@ -295,6 +310,9 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, p
     else:
         col_widths = [0.6*inch, 1*inch, 1*inch, 0.8*inch, 0.8*inch, 1.2*inch, 2*inch]
     splits_table = Table(splits_data, colWidths=col_widths)
+    # Determine notes column index based on whether markers are present
+    notes_col_index = 7 if has_markers else 6
+    
     splits_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -305,7 +323,13 @@ def generate_gpx_analysis_pdf(analyzer, km_data, total_distance, pace_minutes, p
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Changed to TOP for better text wrapping
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),  # Add padding for better readability
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 1), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+        # Special alignment for notes column - left align for better readability
+        ('ALIGN', (notes_col_index, 1), (notes_col_index, -1), 'LEFT'),
     ]))
     
     story.append(splits_table)

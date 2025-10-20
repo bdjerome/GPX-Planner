@@ -212,6 +212,7 @@ def main():
         finish_time = analyzer.final_df['cumulative_time_hms'].iloc[-1]
         uphill, downhill = analyzer.gpx_parsed.get_uphill_downhill()
         total_elevation_gain = uphill * loops if uphill else 0
+        total_elevation_loss = downhill * loops if downhill else 0
         
         with col1:
             if use_metric:
@@ -241,11 +242,12 @@ def main():
             
         with col4:
             if use_metric:
-                st.metric("Elevation Gain", f"{total_elevation_gain:.0f} m", border=True)
+                st.metric("Elevation Gain/Loss", f"{total_elevation_gain:.0f}/{total_elevation_loss:.0f} m", border=True)
             else:
                 elevation_gain_ft = total_elevation_gain * 3.28084  # Convert meters to feet
-                st.metric("Elevation Gain", f"{elevation_gain_ft:.0f} ft", border=True)
-        
+                elevation_loss_ft = total_elevation_loss * 3.28084
+                st.metric("Elevation Gain/Loss", f"{elevation_gain_ft:.0f}/{elevation_loss_ft:.0f} ft", border=True)
+
         # Display pace data - use custom markers if they exist, otherwise use km markers
         st.subheader("Pace Data")
         
