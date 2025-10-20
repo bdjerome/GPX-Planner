@@ -4,7 +4,7 @@ import datetime
 from pace_planner import GPXAnalyzer, PaceCalculator, MapVisualizer
 from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km,\
     convert_to_miles, dynamic_input_data_editor, generate_gpx_analysis_pdf \
-        , merge_custom_markers, plotly_elevation_plot, plotly_pace_plot
+        , merge_custom_markers, plotly_elevation_plot, plotly_pace_plot, calculate_time_difference
 
 def main():
     st.set_page_config(layout="wide")
@@ -133,7 +133,7 @@ def main():
                 st.write("E.g., Distance: 5.0, Nickname: 'Water Station'")
                 # Data editor for custom markers
                 custom_marker_distance_type = st.checkbox("Using KM markers?", value=True)
-                custom_marker_data = st.data_editor(pd.DataFrame(columns=["Distance", "Nickname"]), num_rows="dynamic", use_container_width=True)
+                custom_marker_data = st.data_editor(pd.DataFrame(columns=["Distance", "Nickname","Cutoff Time"]), num_rows="dynamic", use_container_width=True)
             
             # Submit button
             st.markdown("---")
@@ -173,7 +173,7 @@ def main():
                 )
                 pace_calc.calculate_times()
                 pace_calc.calculate_clock_times(race_start)
-                
+
                 # Merge custom markers if provided
                 if not custom_marker_data.empty and len(custom_marker_data) > 0:
                     analyzer.final_df = merge_custom_markers(
@@ -264,12 +264,28 @@ def main():
 
         
         if has_custom_markers:
-            # Display custom markers data
-            marker_data = analyzer.final_df[
-                (analyzer.final_df['is_km_marker'] == 1) & 
-                (analyzer.final_df['custom_marker'].str.strip() != '')
-            ][['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms','clock_time', 'custom_marker']].copy()
-            
+            #if cutoff times exist, show those too
+            if 'cutoff_time_formatted' in analyzer.final_df.columns and \
+               analyzer.final_df['cutoff_time_formatted'].notna().any():
+                
+                # Apply the calculation to create the new column using imported function
+                analyzer.final_df['cutoff_buffer_minutes'] = analyzer.final_df.apply(calculate_time_difference, axis=1)
+
+            #changing output to show cutoff times if they exist
+            if 'cutoff_buffer_minutes' in analyzer.final_df.columns:
+                # Display custom markers data with cutoff buffer
+                marker_data = analyzer.final_df[
+                    (analyzer.final_df['is_km_marker'] == 1) & 
+                    (analyzer.final_df['custom_marker'].str.strip() != '')
+                ][['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms','clock_time', 'custom_marker','cutoff_time_formatted', 'cutoff_buffer_minutes']].copy()
+
+            else:
+                # Display custom markers data without cutoff times
+                marker_data = analyzer.final_df[
+                    (analyzer.final_df['is_km_marker'] == 1) & 
+                    (analyzer.final_df['custom_marker'].str.strip() != '')
+                ][['km_number', 'total_distance', 'pace', 'grade', 'cumulative_time_hms','clock_time', 'custom_marker']].copy()
+                
             # Add marker labels to start and finish rows
             first_row['custom_marker'] = 'START'
             last_row['custom_marker'] = 'FINISH'
@@ -330,8 +346,8 @@ def main():
             # Create converted display columns (preserve original data)
             km_data['distance_display'] = km_data['total_distance'].apply(convert_to_miles).round(1)
             km_data['pace_display'] = km_data['pace'].apply(lambda x: format_pace(convert_to_mph(x)))
-            
-            # Select columns for display (imperial)
+
+            # Start with base columns for imperial
             display_columns = ['distance_display', 'pace_display', 'grade', 'cumulative_time_hms', 'clock_time']
             column_renames = {
                 'distance_display': 'Miles',
@@ -341,14 +357,24 @@ def main():
                 'clock_time': 'Clock Time'
             }
             
-            # Handle custom markers if present
+            # Add Marker column if it exists
             if 'Marker' in km_data.columns:
                 display_columns.append('Marker')
+                
+            # Add cutoff time columns if they exist
+            if 'cutoff_time_formatted' in km_data.columns and \
+               km_data['cutoff_time_formatted'].notna().any():
+                display_columns.extend(['cutoff_time_formatted', 'cutoff_buffer_minutes'])
+                column_renames.update({
+                    'cutoff_time_formatted': 'Cutoff Time',
+                    'cutoff_buffer_minutes': 'Cutoff Buffer (min)'
+                })
+
         else:
             # Create formatted pace for metric display
             km_data['pace_display'] = km_data['pace'].apply(format_pace)
             
-            # Use metric columns
+            # Start with base columns for metric
             display_columns = ['total_distance', 'pace_display', 'grade', 'cumulative_time_hms', 'clock_time']
             column_renames = {
                 'total_distance': 'KM',
@@ -358,9 +384,18 @@ def main():
                 'clock_time': 'Clock Time'
             }
             
-            # Handle custom markers if present
+            # Add Marker column if it exists
             if 'Marker' in km_data.columns:
                 display_columns.append('Marker')
+                
+            # Add cutoff time columns if they exist
+            if 'cutoff_time_formatted' in km_data.columns and \
+               km_data['cutoff_time_formatted'].notna().any():
+                display_columns.extend(['cutoff_time_formatted', 'cutoff_buffer_minutes'])
+                column_renames.update({
+                    'cutoff_time_formatted': 'Cutoff Time',
+                    'cutoff_buffer_minutes': 'Cutoff Buffer (min)'
+                })
 
         # Create display dataframe with appropriate columns
         km_data_display = km_data[display_columns].copy()

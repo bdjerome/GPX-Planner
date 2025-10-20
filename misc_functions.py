@@ -33,6 +33,39 @@ def convert_to_km(miles):
     """Convert miles to kilometers"""
     return miles * 1.60934
 
+def calculate_time_difference(row):
+    """
+    Calculate the difference between cutoff time and clock time in minutes.
+    
+    Args:
+        row: DataFrame row containing 'cutoff_time_formatted' and 'clock_time' columns
+    
+    Returns:
+        float: Difference in minutes (positive = arrive before cutoff, negative = arrive after cutoff)
+        pd.NA: If either time is missing or invalid
+    """
+    if pd.notna(row['cutoff_time_formatted']) and pd.notna(row['clock_time']):
+        try:
+            # Parse clock_time string to time object if it's a string
+            if isinstance(row['clock_time'], str):
+                clock_time = datetime.datetime.strptime(row['clock_time'], "%H:%M:%S").time()
+            else:
+                clock_time = row['clock_time']
+            
+            cutoff_time = row['cutoff_time_formatted']
+            
+            # Convert both times to datetime for calculation (using arbitrary date)
+            base_date = datetime.date.today()
+            cutoff_datetime = datetime.datetime.combine(base_date, cutoff_time)
+            clock_datetime = datetime.datetime.combine(base_date, clock_time)
+            
+            # Calculate difference in minutes
+            diff_minutes = (cutoff_datetime - clock_datetime).total_seconds() / 60
+            return round(diff_minutes, 1)
+        except (ValueError, TypeError):
+            return pd.NA
+    return pd.NA
+
 def create_static_map_image(analyzer_df, show_arrows=True, width_inches=8, height_inches=6):
     """
     Create a stylized PNG map image using matplotlib without axes or grid
@@ -390,6 +423,25 @@ def merge_custom_markers(analyzer_final_df, custom_marker_data, use_km_markers=T
     if len(custom_markers) == 0:
         return df
     
+    #try to interpret cutoff times from custom markers
+    if not custom_markers.empty and len(custom_markers) > 0:
+        # Check if 'Cutoff Time' column exists and has valid entries
+        if 'Cutoff Time' in custom_markers.columns:
+            # Initialize cutoff_time_formatted column if it doesn't exist
+            if 'cutoff_time_formatted' not in custom_markers.columns:
+                custom_markers['cutoff_time_formatted'] = pd.NA
+                
+            for idx, row in custom_markers.iterrows():
+                cutoff_time_str = row.get('Cutoff Time', None)
+                if pd.notna(cutoff_time_str) and str(cutoff_time_str).strip() != '':
+                    try:
+                        # Parse cutoff time string into a time object
+                        custom_markers.at[idx, 'cutoff_time_formatted'] = datetime.datetime.strptime(str(cutoff_time_str).strip(), "%H:%M:%S").time()
+                    except ValueError:
+                        # Fill with NA value instead of showing warning to avoid breaking computation
+                        custom_markers.at[idx, 'cutoff_time_formatted'] = pd.NA
+
+
     # Convert distances to km if they're in miles
     if not use_km_markers:
         custom_markers['Distance'] = custom_markers['Distance'].apply(convert_to_km)
@@ -400,10 +452,16 @@ def merge_custom_markers(analyzer_final_df, custom_marker_data, use_km_markers=T
     if len(km_markers) == 0:
         return df
     
+    # Initialize cutoff_time_formatted column in main df if cutoff times exist
+    if 'cutoff_time_formatted' in custom_markers.columns:
+        if 'cutoff_time_formatted' not in df.columns:
+            df['cutoff_time_formatted'] = pd.NA
+
     # For each custom marker, find the nearest kilometer marker
     for _, marker in custom_markers.iterrows():
         target_distance = marker['Distance']
         nickname = marker['Nickname'].strip()
+        cutoff_time = marker.get('cutoff_time_formatted', pd.NA) if 'cutoff_time_formatted' in marker else pd.NA
         
         # Find the closest km marker by total_distance
         distances = np.abs(km_markers['total_distance'] - target_distance)
@@ -426,6 +484,10 @@ def merge_custom_markers(analyzer_final_df, custom_marker_data, use_km_markers=T
             else:
                 df.loc[mask, 'custom_marker'] = nickname
                 df.loc[mask, 'marker_nickname'] = nickname
+            
+            # Add cutoff time if it exists and column is available
+            if pd.notna(cutoff_time) and 'cutoff_time_formatted' in df.columns:
+                df.loc[mask, 'cutoff_time_formatted'] = cutoff_time
     
     return df
 
