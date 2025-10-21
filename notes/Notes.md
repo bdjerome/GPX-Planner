@@ -33,6 +33,7 @@
 - [x] Add elevation drop
 - [x] Ability to add cutoff times to custom markers 
 - Graphical outputs so users understand how fatigue decay is affecting performance (same with hill adjustment)
+  - Put in the documentation page, add a slider to let people play with different pace options
 - Create documentation for everything (Youtube Tutorial Video?) need to link in app
 - Customer feedback area (where will this go? Google sheets and email notification ?)
 - Give more user choice for marker setup 
