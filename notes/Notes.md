@@ -34,7 +34,6 @@
 - [x] Ability to add cutoff times to custom markers 
 - Create documentation for everything (Youtube Tutorial Video?) need to link in app 
 - Customer feedback area (where will this go? Google sheets and email notification ?)
-- Website metric tracking (how to do for free PostHog ?)
 - Graphical outputs so users understand how fatigue decay is affecting performance (same with hill adjustment)
 - Give more user choice for marker setup 
   - Can select every KM, Half, Quarter
@@ -45,6 +44,7 @@
 - More customization to route creation 
   - Reverse Loops
   - Add negative split possibility to pace calculation
+- Website metric tracking (how to do for free PostHog ?)
 - Upload multiple gpx files and weave together
 - Find a solution to no elevation given (use 3rd party api's ?)
 - Donation button
