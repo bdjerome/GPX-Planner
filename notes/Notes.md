@@ -32,9 +32,9 @@
 #Future Improvements
 - [x] Add elevation drop
 - [x] Ability to add cutoff times to custom markers 
-- Create documentation for everything (Youtube Tutorial Video?) need to link in app 
-- Customer feedback area (where will this go? Google sheets and email notification ?)
 - Graphical outputs so users understand how fatigue decay is affecting performance (same with hill adjustment)
+- Create documentation for everything (Youtube Tutorial Video?) need to link in app
+- Customer feedback area (where will this go? Google sheets and email notification ?)
 - Give more user choice for marker setup 
   - Can select every KM, Half, Quarter
     - Try to parse waypoints from input gpx files and store these
