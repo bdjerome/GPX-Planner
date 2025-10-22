@@ -7,7 +7,7 @@ from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km,\
         , merge_custom_markers, plotly_elevation_plot, plotly_pace_plot, calculate_time_difference
 
 def main():
-    st.set_page_config(layout="wide")
+    st.set_page_config(page_title = "GPX Pace Planner", layout="wide")
     st.title("GPX Pace Planner")
     st.write("Upload a GPX file, analyze your race pace strategy, and optionally generate a pdf report!")
 
