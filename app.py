@@ -7,22 +7,28 @@ from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km,\
         , merge_custom_markers, plotly_elevation_plot, plotly_pace_plot, calculate_time_difference
 
 def main():
-    st.set_page_config(page_title = "GPX Pace Planner", layout="wide")
+    st.set_page_config(
+        page_title="GPX Pace Planner", 
+        layout="wide",
+        initial_sidebar_state="collapsed"
+    )
     st.title("GPX Pace Planner")
     st.write("Upload a GPX file, analyze your race pace strategy, and optionally generate a pdf report!")
 
-    with st.expander(label='Usage Instructions', expanded=True):
-        # Show sample data or instructions
-        st.subheader("How to use:")
-        st.markdown("""
-                    1. Upload or select a saved GPX route file
-        2. Configure the number of loops and your target pace
-        3. Enter the time your race starts
-        4. Optionally
-            - Alter pace by enabling fatigue decay and hill adjustments as needed
-            - Input custom markers with nicknames (aid stations, planned meetups, etc.)
-        4. Click 'Analyze Route' to see your pace strategy!
-                    """)
+    st.page_link("pages/tutorial.py", label="**:blue[Click Here to View Tutorial]**")
+
+    # with st.expander(label='Usage Instructions', expanded=True):
+    #     # Show sample data or instructions
+    #     st.subheader("How to use:")
+    #     st.markdown("""
+    #                 1. Upload or select a saved GPX route file
+    #     2. Configure the number of loops and your target pace
+    #     3. Enter the time your race starts
+    #     4. Optionally
+    #         - Alter pace by enabling fatigue decay and hill adjustments as needed
+    #         - Input custom markers with nicknames (aid stations, planned meetups, etc.)
+    #     4. Click 'Analyze Route' to see your pace strategy!
+    #                 """)
     
     # Create two columns for Route Selection and Analysis Configuration
     main_col1, main_col2 = st.columns(2)
