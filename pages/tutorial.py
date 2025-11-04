@@ -48,6 +48,7 @@ def main():
     adv_col1, adv_col2 = st.columns([0.7, 0.3])
     
     with adv_col1:
+        st.warning("Both the Hill Adjustment and Fatigue Decay functions were created by me based on what felt right, but I am in the process of finding research papers or references for further improvement.")
         st.subheader("🏔️ Hill Adjustments")
         st.markdown("""
         **Automatic Pace Correction for Elevation**
