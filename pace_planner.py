@@ -12,6 +12,7 @@ import math
 import folium
 import matplotlib.pyplot as plt
 
+
 #Usage Order IMPORTANT
 # analyzer = GPXAnalyzer('route.gpx')
 # analyzer.load_gpx()
@@ -26,6 +27,47 @@ import matplotlib.pyplot as plt
 # map.create_base_map()
 # map.add_kilometer_markers()
 # map.save('my_map.html')
+def speed_calculation(base_pace, current_distance, grade, total_race_distance, decay: bool = False, hill_mode: bool = False):
+    """
+    Estimate pace (minutes per km) based on segment distance and grade.
+    Uses logarithmic decay for more realistic fatigue modeling.
+    
+    Args:
+        base_pace (float): Base pace in min/km
+        current_distance (float): Current distance in km
+        grade (float): Grade percentage for current segment
+        total_race_distance (float): Total race distance in km
+        decay (bool): Whether to apply fatigue decay
+        hill_mode (bool): Whether to apply hill adjustments
+    
+    Returns:
+        float: Adjusted pace in min/km
+    """
+    # pace is min/km
+    adjusted_pace = base_pace
+    
+    if decay:
+        # Logarithmic decay - pace slows down more after halfway point
+        halfway_point = total_race_distance / 2
+
+        if current_distance <= halfway_point:
+            early_decay = 0.05 * math.log(1 + current_distance/halfway_point)
+        else:
+            progress_beyond_halfway = (current_distance - halfway_point)
+            early_decay = 0.05 * math.log(2) + 0.2 * math.log(1 + progress_beyond_halfway)
+
+        adjusted_pace += early_decay  # ADD to make pace slower
+
+    if hill_mode and grade > 0 and grade < 20:
+        # Hill adjustment - pace decreases based on positive grade
+        grade_factor = 0.08  # pace decreases by 0.08 min/km for every 1% increase in grade
+        adjusted_pace += grade_factor * grade
+    elif hill_mode and grade >= 20:
+        grade_factor = 0.12  # pace decreases by 0.12 min/km for every 1% increase in grade
+        adjusted_pace += grade_factor * grade
+        adjusted_pace = min(adjusted_pace, 12.5) #ensure pace doesn't exceed equivalent of 20 min/mile
+    
+    return adjusted_pace
 
 class GPXAnalyzer:
     def __init__(self, gpx_file_path):
@@ -139,38 +181,6 @@ class PaceCalculator:
 
         #segment gain 
         df['segment_gain'] = df['elevation'].diff()
-
-        #creating function to calculate pace over each segment
-        def speed_calculation(base_pace, current_distance, grade, total_race_distance, decay: bool = False, hill_mode: bool = False):
-            """
-            Estimate pace (minutes per km) based on segment distance and grade.
-            Uses logarithmic decay for more realistic fatigue modeling.
-            """
-            # pace is min/km
-            adjusted_pace = base_pace
-            
-            if decay:
-                # Logarithmic decay - pace slows down more after halfway point
-                halfway_point = total_race_distance / 2
-
-                if current_distance <= halfway_point:
-                    early_decay = 0.05 * math.log(1 + current_distance/halfway_point)
-                else:
-                    progress_beyond_halfway = (current_distance - halfway_point)
-                    early_decay = 0.05 * math.log(2) + 0.2 * math.log(1 + progress_beyond_halfway)
-
-                adjusted_pace += early_decay  # ADD to make pace slower
-
-            if hill_mode and grade > 0 and grade < 20:
-                # Hill adjustment - pace decreases based on positive grade
-                grade_factor = 0.08  # pace decreases by 0.08 min/km for every 1% increase in grade
-                adjusted_pace += grade_factor * grade
-            elif hill_mode and grade >= 20:
-                grade_factor = 0.12  # pace decreases by 0.12 min/km for every 1% increase in grade
-                adjusted_pace += grade_factor * grade
-                adjusted_pace = min(adjusted_pace, 12.5) #ensure pace doesn't exceed equivalent of 20 min/mile
-            
-            return adjusted_pace
 
         # Get total race distance for decay calculation
         total_race_distance = df['total_distance'].max()

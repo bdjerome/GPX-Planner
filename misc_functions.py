@@ -585,7 +585,7 @@ def get_custom_markers_summary(analyzer_final_df):
     
     return summary
 
-def plotly_elevation_plot(analyzer, total_elevation_gain):
+def plotly_elevation_plot(analyzer, total_elevation_gain, use_metric=True):
     "create elevation plot using plotly for output"
 
     elevation_df = analyzer.final_df[['total_distance', 'elevation']].copy()
@@ -593,13 +593,23 @@ def plotly_elevation_plot(analyzer, total_elevation_gain):
 
     #creating plotly chart if elevation data exists
     if total_elevation_gain > 0:
+        # Convert units if imperial is selected
+        if not use_metric:
+            elevation_df['total_distance'] = elevation_df['total_distance'].apply(convert_to_miles)
+            elevation_df['elevation'] = elevation_df['elevation'] * 3.28084  # Convert meters to feet
+            distance_label = 'Distance (miles)'
+            elevation_label = 'Elevation (ft)'
+        else:
+            distance_label = 'Distance (km)'
+            elevation_label = 'Elevation (m)'
+        
         elevation_plot = px.line(
             elevation_df,
             x='total_distance',
             y='elevation',
             labels={
-                'total_distance': 'Distance (km)',
-                'elevation': 'Elevation (m)'
+                'total_distance': distance_label,
+                'elevation': elevation_label
             },
             height=300
         )
@@ -616,21 +626,38 @@ def plotly_elevation_plot(analyzer, total_elevation_gain):
     return elevation_plot
 
 
-def plotly_pace_plot(analyzer):
+def plotly_pace_plot(data, use_metric=True):
     "create pace plot used in the streamlit output"
-
-    pace_df = analyzer.final_df[['total_distance', 'pace']].copy()
+    
+    # Handle both analyzer objects and DataFrames
+    if hasattr(data, 'final_df'):
+        # It's an analyzer object
+        pace_df = data.final_df[['total_distance', 'pace']].copy()
+    else:
+        # It's a DataFrame - assume it has the correct column names
+        pace_df = data[['total_distance', 'pace']].copy()
+    
     pace_df = pace_df.dropna(subset=['pace'])
 
     #creating plotly chart if elevation data exists
     if len(pace_df) > 1:
+        # Convert units if imperial is selected
+        if not use_metric:
+            pace_df['total_distance'] = pace_df['total_distance'].apply(convert_to_miles)
+            pace_df['pace'] = pace_df['pace'].apply(convert_to_mph)
+            distance_label = 'Distance (miles)'
+            pace_label = 'Pace (min/mile)'
+        else:
+            distance_label = 'Distance (km)'
+            pace_label = 'Pace (min/km)'
+        
         pace_plot = px.line(
             pace_df,
             x='total_distance',
             y='pace',
             labels={
-                'total_distance': 'Distance (km)',
-                'pace': 'Pace'
+                'total_distance': distance_label,
+                'pace': pace_label
             },
             height=300
         )

@@ -7,22 +7,15 @@ from misc_functions import convert_to_mph, convert_to_kmh, convert_to_km,\
         , merge_custom_markers, plotly_elevation_plot, plotly_pace_plot, calculate_time_difference
 
 def main():
-    st.set_page_config(page_title = "GPX Pace Planner", layout="wide")
+    st.set_page_config(
+        page_title="GPX Pace Planner", 
+        layout="wide",
+        initial_sidebar_state="collapsed"
+    )
     st.title("GPX Pace Planner")
     st.write("Upload a GPX file, analyze your race pace strategy, and optionally generate a pdf report!")
 
-    with st.expander(label='Usage Instructions', expanded=True):
-        # Show sample data or instructions
-        st.subheader("How to use:")
-        st.markdown("""
-                    1. Upload or select a saved GPX route file
-        2. Configure the number of loops and your target pace
-        3. Enter the time your race starts
-        4. Optionally
-            - Alter pace by enabling fatigue decay and hill adjustments as needed
-            - Input custom markers with nicknames (aid stations, planned meetups, etc.)
-        4. Click 'Analyze Route' to see your pace strategy!
-                    """)
+    st.page_link("pages/tutorial.py", label="**:blue[Click Here to View Tutorial]**")
     
     # Create two columns for Route Selection and Analysis Configuration
     main_col1, main_col2 = st.columns(2)
@@ -65,7 +58,7 @@ def main():
             import os
             saved_routes_dir = "saved_routes"
             if os.path.exists(saved_routes_dir):
-                gpx_files = [f for f in os.listdir(saved_routes_dir) if f.endswith('.gpx')]
+                gpx_files = sorted([f for f in os.listdir(saved_routes_dir) if f.endswith('.gpx')], key=str.lower)
                 if gpx_files:
                     selected_route = st.selectbox("Select a saved route:", gpx_files)
                     selected_file_path = os.path.join(saved_routes_dir, selected_route)
@@ -535,19 +528,19 @@ def main():
         
         # Show elevation profile
         st.subheader("Elevation Profile")
-        elevation_plot = plotly_elevation_plot(analyzer, total_elevation_gain)
+        elevation_plot = plotly_elevation_plot(analyzer, total_elevation_gain, use_metric)
         if elevation_plot:
-            st.plotly_chart(elevation_plot)
+            st.plotly_chart(elevation_plot, use_container_width=True)
         else:
             st.write("No elevation data available to display.")
 
         # Show pace progression
         st.subheader("Pace Progression")
-        pace_plot = plotly_pace_plot(analyzer)
+        pace_plot = plotly_pace_plot(analyzer, use_metric)
         if pace_plot:
-            st.plotly_chart(pace_plot)
+            st.plotly_chart(pace_plot, use_container_width=True)
         else:
-            st.write("No elevation data available to display.")
+            st.write("No pace data available to display.")
     
     elif submitted and selected_file_path is None:
         st.error("Please select a GPX file before analyzing ")
