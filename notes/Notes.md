@@ -38,6 +38,7 @@
 - [x] Create documentation for everything (Youtube Tutorial Video?) need to link in app
   - [x] Tutorial Video (pre-input custom markers, create little script, )
 - Customer feedback area (where will this go? Google sheets and email notification ?)
+  - update the Need More Help? section of the tutorial
 - More experimentation and understanding of pace functions (VO2, decay)
 - Add image of map to the pdf output (have matplotlib might need selenium workaround)
 - Website metric tracking (how to do for free PostHog ?)
