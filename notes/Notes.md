@@ -36,18 +36,18 @@
 - [x] Graphical outputs so users understand how fatigue decay is affecting performance (same with hill adjustment)
   - [x] Put in the documentation page, add a slider to let people play with different pace options
 - [x] Create documentation for everything (Youtube Tutorial Video?) need to link in app
-  - Tutorial Video (pre-input custom markers, create little script, )
+  - [x] Tutorial Video (pre-input custom markers, create little script, )
 - Customer feedback area (where will this go? Google sheets and email notification ?)
+- More experimentation and understanding of pace functions (VO2, decay)
+- Add image of map to the pdf output (have matplotlib might need selenium workaround)
+- Website metric tracking (how to do for free PostHog ?)
 - Give more user choice for marker setup 
   - Can select every KM, Half, Quarter
     - Try to parse waypoints from input gpx files and store these
   - Will need to pass as a dict to MapVisualizer
-- More experimentation and understanding of pace functions (VO2, decay)
-- Add image of map to the pdf output (have matplotlib might need selenium workaround)
 - More customization to route creation 
   - Reverse Loops
   - Add negative split possibility to pace calculation
-- Website metric tracking (how to do for free PostHog ?)
 - Upload multiple gpx files and weave together
 - Find a solution to no elevation given (use 3rd party api's ?)
 - Donation button
