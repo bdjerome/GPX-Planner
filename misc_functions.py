@@ -499,8 +499,13 @@ def merge_custom_markers(analyzer_final_df, custom_marker_data, use_km_markers=T
                 cutoff_time_str = row.get('Cutoff Time', None)
                 if pd.notna(cutoff_time_str) and str(cutoff_time_str).strip() != '':
                     try:
-                        # Parse cutoff time string into a time object
-                        custom_markers.at[idx, 'cutoff_time_formatted'] = datetime.datetime.strptime(str(cutoff_time_str).strip(), "%H:%M:%S").time()
+                        cutoff_str = str(cutoff_time_str).strip()
+                        # Try parsing with seconds first (HH:MM:SS)
+                        try:
+                            custom_markers.at[idx, 'cutoff_time_formatted'] = datetime.datetime.strptime(cutoff_str, "%H:%M:%S").time()
+                        except ValueError:
+                            # If that fails, try parsing without seconds (HH:MM)
+                            custom_markers.at[idx, 'cutoff_time_formatted'] = datetime.datetime.strptime(cutoff_str, "%H:%M").time()
                     except ValueError:
                         # Fill with NA value instead of showing warning to avoid breaking computation
                         custom_markers.at[idx, 'cutoff_time_formatted'] = pd.NA
