@@ -27,9 +27,6 @@
 - [x] update pace progression output graph 
 - [x] Move how to use to top of page
 - [x] Wrap text in pdf notes column if needed (would generating as excel be easier)
-
-
-#Future Improvements
 - [x] Add elevation drop
 - [x] Ability to add cutoff times to custom markers 
 - [x] Make Elevation Profile and Pace Progression utilize the "Use Metric Units" checkbox toggle
@@ -37,11 +34,25 @@
   - [x] Put in the documentation page, add a slider to let people play with different pace options
 - [x] Create documentation for everything (Youtube Tutorial Video?) need to link in app
   - [x] Tutorial Video (pre-input custom markers, create little script, )
+
+
+#App Infrastructure Changes
+- Create lightweight fastapi to handle data operations
+  - How can I host?
+- Add database so users can store past plans
+- Add login screen
+- Add ability to save current input plan
+- Add ability to load past saved plans
+- Would it be useful to add a "Did you complete this plan?" feature?
+  - Could then prompt user with feedback form? (How long it actually took, sex, age, etc.)
+    - This information could be anonymized and stored in separate DB that I can use for training prediction models
+
+
+#Future Improvements
 - Customer feedback area (where will this go? Google sheets and email notification ?)
   - update the Need More Help? section of the tutorial
 - More experimentation and understanding of pace functions (VO2, decay)
 - Add image of map to the pdf output (have matplotlib might need selenium workaround)
-- Website metric tracking (how to do for free PostHog ?)
 - Give more user choice for marker setup 
   - Can select every KM, Half, Quarter
     - Try to parse waypoints from input gpx files and store these
@@ -49,7 +60,6 @@
 - More customization to route creation 
   - Reverse Loops
   - Add negative split possibility to pace calculation
-- Upload multiple gpx files and weave together
 - Find a solution to no elevation given (use 3rd party api's ?)
-- Donation button
+- Donation/Support button
 
