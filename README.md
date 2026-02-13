@@ -1,1 +1,3 @@
 This is an application I made to solve a niche issue with regard to planning endurance events. In the past I have planned out races with family/friends by writing on a piece of paper and using mental math to determine what time to meet me and any additional notes. As races get longer this becomes an even more involved process, so why not build something to make this race day planning easier. This app is still a work in progress and I have many more features and experimentation to be done.
+
+For a live published version go to https://gpx-pace-planner.streamlit.app/
