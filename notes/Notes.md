@@ -49,9 +49,10 @@
 
 
 #Future Improvements
+- In Pace Data ouptput change Grade (%) to be the Avg Grade over that period
+- More experimentation and understanding of pace functions (VO2, decay)
 - Customer feedback area (where will this go? Google sheets and email notification ?)
   - update the Need More Help? section of the tutorial
-- More experimentation and understanding of pace functions (VO2, decay)
 - Add image of map to the pdf output (have matplotlib might need selenium workaround)
 - Give more user choice for marker setup 
   - Can select every KM, Half, Quarter
